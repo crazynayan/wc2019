@@ -1,0 +1,7 @@
+venv/
+.idea/
+__pycache__
+app.db
+firestore-key.json
+*.env
+app/__pycache__/
