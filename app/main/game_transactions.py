@@ -244,3 +244,18 @@ def invite_bid():
     if not bid:
         return Bid.ERROR_SYSTEM
     return bid
+
+
+def ranked_users():
+    return User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
+
+
+def upload_users(user_list):
+    # Format of user_list is username, name, password, color, bg_color
+    User.delete_all()
+    for user_row in user_list:
+        user = User(user_row[1])
+        user.username = user_row[0]
+        user.color = user_row[3]
+        user.bg_color = user_row[4]
+        user.create()

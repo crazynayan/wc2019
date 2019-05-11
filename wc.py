@@ -1,8 +1,9 @@
 from firebase_admin import firestore
-from app import create_app
+from app import create_app, cli
 from app.models import User, Player, Game, Bid
 
 app = create_app()
+cli.register(app)
 
 
 @app.shell_context_processor

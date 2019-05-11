@@ -1,5 +1,6 @@
 from flask import render_template
 from app.main import bp
+from app.main.game_transactions import *
 
 
 @bp.route('/')
@@ -7,4 +8,5 @@ from app.main import bp
 def index():
     template = 'index.html'
     title = 'Home'
-    return render_template(template, title=title)
+    users = ranked_users()
+    return render_template(template, title=title, users=users)

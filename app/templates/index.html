@@ -2,7 +2,32 @@
 
 {% block app_content %}
 <h1>
-    Hello, World!
+    World Cup Super League - Rankings
 </h1>
-
+{% if users %}
+<table class="table table-bordered">
+    <thead class="thead-dark">
+    <th scope="col">Rank</th>
+    <th scope="col">Name</th>
+    <th scope="col">Points</th>
+    <th scope="col">Balance</th>
+    <th scope="col">Players</th>
+    </thead>
+    <tbody>
+    {% for user in users %}
+    <tr style="font-weight:bold;">
+        <td>{{ loop.index }}</td>
+        <td style="background-color:{{ user.bg_color }}; color:{{ user.color }};">
+            {{ user.name }}
+        </td>
+        <td>{{ user.points }}</td>
+        <td>{{ user.balance }}</td>
+        <td>{{ user.player_count }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No users present.</p>
+{% endif %}
 {% endblock %}

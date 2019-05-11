@@ -6,4 +6,5 @@ firestore-key.json
 test-key.json
 secret-key.txt
 *.env
+*.csv
 app/__pycache__/
