@@ -3,5 +3,6 @@ venv/
 __pycache__
 app.db
 firestore-key.json
+secret-key.txt
 *.env
 app/__pycache__/
