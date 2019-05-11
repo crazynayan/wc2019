@@ -1,6 +1,5 @@
 from firebase_admin import firestore
 from google.cloud.exceptions import NotFound
-from app import db
 
 
 class FirestoreModel:
@@ -11,6 +10,10 @@ class FirestoreModel:
     BATCH = None
     ORDER_ASCENDING = firestore.Query.ASCENDING
     ORDER_DESCENDING = firestore.Query.DESCENDING
+    try:
+        db = firestore.client()
+    except ValueError:
+        db = None
 
     def __init__(self, field_value):
         self.doc_id = None
@@ -18,6 +21,14 @@ class FirestoreModel:
 
     def __repr__(self):
         return f'<{self.DEFAULT}: {getattr(self, self.DEFAULT)}>'
+
+    @classmethod
+    def init_db(cls, db_app=None):
+        try:
+            cls.db = firestore.client(db_app)
+        except ValueError:
+            return False
+        return True
 
     def to_dict(self):
         model_dict = self.__dict__.copy()
@@ -38,7 +49,7 @@ class FirestoreModel:
         return model
 
     def create(self):
-        doc = db.collection(self.COLLECTION).add(self.to_dict())
+        doc = self.db.collection(self.COLLECTION).add(self.to_dict())
         self.doc_id = doc[1].id
         return self
 
@@ -47,7 +58,7 @@ class FirestoreModel:
             self.doc_id = doc_id
         elif not self.doc_id:
             return None
-        db.collection(self.COLLECTION).document(self.doc_id).set(self.to_dict())
+        self.db.collection(self.COLLECTION).document(self.doc_id).set(self.to_dict())
         return self
 
     @classmethod
@@ -55,7 +66,7 @@ class FirestoreModel:
         if not doc_id:
             return None
         try:
-            doc = db.collection(cls.COLLECTION).document(doc_id).get()
+            doc = cls.db.collection(cls.COLLECTION).document(doc_id).get()
         except NotFound:
             return None
         if not doc.exists:
@@ -68,7 +79,7 @@ class FirestoreModel:
         if not self.doc_id:
             return False
         try:
-            doc = db.collection(self.COLLECTION).document(self.doc_id).get()
+            doc = self.db.collection(self.COLLECTION).document(self.doc_id).get()
         except NotFound:
             return False
         if not doc.exists:
@@ -83,11 +94,11 @@ class FirestoreModel:
         # Returns the document reference if no transaction provided else it will provided a transactional doc
         if not self.doc_id:
             return None, None
-        doc_ref = db.collection(self.COLLECTION).document(self.doc_id)
+        doc_ref = self.db.collection(self.COLLECTION).document(self.doc_id)
         doc = None
         if transaction:
             try:
-                doc = db.collection(self.COLLECTION).document(self.doc_id).get(transaction=transaction)
+                doc = self.db.collection(self.COLLECTION).document(self.doc_id).get(transaction=transaction)
             except NotFound:
                 pass
             if doc and not doc.exists:
@@ -99,13 +110,13 @@ class FirestoreModel:
             self.doc_id = doc_id
         elif not self.doc_id:
             return None
-        db.collection(self.COLLECTION).document(self.doc_id).delete()
+        self.db.collection(self.COLLECTION).document(self.doc_id).delete()
         self.doc_id = None
         return self
 
     @classmethod
     def get_all(cls):
-        docs = db.collection(cls.COLLECTION).stream()
+        docs = cls.db.collection(cls.COLLECTION).stream()
         models = list()
         for doc in docs:
             model = cls.from_dict(doc.to_dict())
@@ -115,7 +126,7 @@ class FirestoreModel:
 
     @classmethod
     def query(cls, **kwargs):
-        doc_ref = db.collection(cls.COLLECTION)
+        doc_ref = cls.db.collection(cls.COLLECTION)
         for field in kwargs:
             if field in cls('test').__dict__ and field != 'doc_id':
                 doc_ref = doc_ref.where(field, '==', kwargs[field])
@@ -129,7 +140,7 @@ class FirestoreModel:
 
     @classmethod
     def order_by(cls, *criteria, query={}):
-        doc_ref = db.collection(cls.COLLECTION)
+        doc_ref = cls.db.collection(cls.COLLECTION)
         if query:
             for field in query:
                 if field in cls('test').__dict__ and field != 'doc_id':
@@ -161,7 +172,7 @@ class FirestoreModel:
 
     @classmethod
     def query_first(cls, **kwargs):
-        doc_ref = db.collection(cls.COLLECTION)
+        doc_ref = cls.db.collection(cls.COLLECTION)
         for field in kwargs:
             if field in cls('test').__dict__ and field != 'doc_id':
                 doc_ref = doc_ref.where(field, '==', kwargs[field])
@@ -176,19 +187,19 @@ class FirestoreModel:
 
     @classmethod
     def delete_all(cls):
-        for doc in db.collection(cls.COLLECTION).stream():
+        for doc in cls.db.collection(cls.COLLECTION).stream():
             doc.reference.delete()
 
     @classmethod
     def init_batch(cls):
-        cls.BATCH = db.batch()
+        cls.BATCH = cls.db.batch()
 
     def update_batch(self):
         if not self.doc_id:
             return None
         if not self.BATCH:
-            self.BATCH = db.batch()
-        model_ref = db.collection(self.COLLECTION).document(self.doc_id)
+            self.BATCH = self.db.batch()
+        model_ref = self.db.collection(self.COLLECTION).document(self.doc_id)
         self.BATCH.set(model_ref, self.to_dict())
         return self
 
