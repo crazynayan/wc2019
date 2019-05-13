@@ -401,7 +401,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(4, pranay.player_count)
 
         # Get pranay player view and check
-        db_players = Player.order_by(('score', Player.ORDER_DESCENDING), query={'owner_username': 'pp'})
+        db_players = Player.order_by(('score', Player.ORDER_DESCENDING), ('price', Player.ORDER_DESCENDING),
+                                     query={'owner_username': 'pp'})
         for index, db_player in enumerate(db_players):
             self.assertDictEqual(test_players[index].to_dict(), db_player.to_dict())
 

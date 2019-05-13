@@ -246,7 +246,7 @@ def invite_bid():
     return bid
 
 
-def ranked_users():
+def ranked_users_view():
     return User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
 
 
@@ -259,3 +259,8 @@ def upload_users(user_list):
         user.color = user_row[3]
         user.bg_color = user_row[4]
         user.create()
+
+
+def purchased_players_view(username):
+    return Player.order_by(('score', User.ORDER_DESCENDING), ('price', User.ORDER_DESCENDING),
+                           query={'owner_username': username})

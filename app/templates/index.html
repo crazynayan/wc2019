@@ -18,7 +18,10 @@
     <tr style="font-weight:bold;">
         <td>{{ loop.index }}</td>
         <td style="background-color:{{ user.bg_color }}; color:{{ user.color }};">
-            {{ user.name }}
+            <a href="{{ url_for('main.purchased_players', username=user.username) }}"
+                style="text-decoration:none !important; color:inherit;">
+                <div>{{ user.name }}</div>
+            </a>
         </td>
         <td>{{ user.points }}</td>
         <td>{{ user.balance }}</td>

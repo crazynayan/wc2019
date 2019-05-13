@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<h1>
+    World Cup Super League - Players
+</h1>
+{% if players %}
+<table class="table table-bordered table-sm table-hover">
+    <thead class="thead-dark">
+    <th scope="col">No.</th>
+    <th scope="col">Name</th>
+    <th scope="col">Score</th>
+    <th scope="col">Price</th>
+    <th scope="col">Country</th>
+    </thead>
+    <tbody>
+    {% for player in players %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ player.name }}</td>
+        <td>{{ player.score }}</td>
+        <td>{{ player.price }}</td>
+        <td>{{ player.country }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No players purchased.</p>
+{% endif %}
+{% endblock %}
