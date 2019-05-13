@@ -15,7 +15,7 @@ class FirestoreModel:
     except ValueError:
         db = None
 
-    def __init__(self, field_value):
+    def __init__(self, field_value=None):
         self.doc_id = None
         setattr(self, self.DEFAULT, field_value)
 
@@ -128,7 +128,7 @@ class FirestoreModel:
     def query(cls, **kwargs):
         doc_ref = cls.db.collection(cls.COLLECTION)
         for field in kwargs:
-            if field in cls('test').__dict__ and field != 'doc_id':
+            if field in cls().__dict__ and field != 'doc_id':
                 doc_ref = doc_ref.where(field, '==', kwargs[field])
         docs = doc_ref.stream()
         models = list()
@@ -143,7 +143,7 @@ class FirestoreModel:
         doc_ref = cls.db.collection(cls.COLLECTION)
         if query:
             for field in query:
-                if field in cls('test').__dict__ and field != 'doc_id':
+                if field in cls().__dict__ and field != 'doc_id':
                     doc_ref = doc_ref.where(field, '==', query[field])
         for criterion in criteria:
             field = None
@@ -174,7 +174,7 @@ class FirestoreModel:
     def query_first(cls, **kwargs):
         doc_ref = cls.db.collection(cls.COLLECTION)
         for field in kwargs:
-            if field in cls('test').__dict__ and field != 'doc_id':
+            if field in cls().__dict__ and field != 'doc_id':
                 doc_ref = doc_ref.where(field, '==', kwargs[field])
         docs = doc_ref.limit(1).stream()
         try:

@@ -21,16 +21,15 @@ class UserTest(unittest.TestCase):
         Bid.delete_all()
 
     def tearDown(self) -> None:
-        User.delete_all()
-        Player.delete_all()
-        Game.delete_all()
-        Bid.delete_all()
+        # User.delete_all()
+        # Player.delete_all()
+        # Game.delete_all()
+        # Bid.delete_all()
         self.app_context.pop()
 
     def test_user_create(self):
         # Setup a user and test_user dictionary
-        user = User('Vinayak')
-        user.username = 'vp'
+        user = User('Vinayak', 'vp')
         test_user_dict = {
             'username': 'vp',
             'name': 'Vinayak',
@@ -38,7 +37,8 @@ class UserTest(unittest.TestCase):
             'points': 0.0,
             'color': 'black',
             'bg_color': 'white',
-            'player_count': 0
+            'player_count': 0,
+            'password_hash': None,
         }
 
         # Create a user
@@ -51,10 +51,8 @@ class UserTest(unittest.TestCase):
 
     def test_user_update(self):
         # Setup a user and test_user
-        user = User('Purvi')
-        user.username = 'pz'
-        test_user = User('Purvi')
-        test_user.username = 'pz'
+        user = User('Purvi', 'pz')
+        test_user = User('Purvi', 'pz')
 
         # Add it to the database with the username as the doc id
         user.update(user.username)
@@ -85,8 +83,7 @@ class UserTest(unittest.TestCase):
             'Sandeep': 'sb',
         }
         for name in names:
-            user = User(name)
-            user.username = names[name]
+            user = User(name, names[name])
             users[name] = user
             test_users[name] = user
 
@@ -111,8 +108,7 @@ class UserTest(unittest.TestCase):
             'Sandeep': {'username': 'sb', 'player_count': 1, 'balance': 1000, 'found': False},
         }
         for name in names:
-            user = User(name)
-            user.username = names[name]['username']
+            user = User(name, names[name]['username'])
             user.player_count = names[name]['player_count']
             user.balance = names[name]['balance']
             users[name] = user
@@ -136,8 +132,7 @@ class UserTest(unittest.TestCase):
 
         # Test query_first
         name = 'Manisha'
-        manisha = User(name)
-        manisha.username = names[name]['username']
+        manisha = User(name, names[name]['username'])
         manisha.player_count = names[name]['player_count']
         manisha.balance = names[name]['balance']
         db_user = User.query_first(player_count=3, balance=5000)
@@ -188,10 +183,8 @@ class GameTest(unittest.TestCase):
 
     def test_game_setup(self):
         # Setup user, player, game
-        sneha = User('Sneha Yadgire')
-        sneha.username = 'sy'
-        manisha = User('Manisha Auti')
-        manisha.username = 'ma'
+        sneha = User('Sneha Yadgire', 'sy')
+        manisha = User('Manisha Auti', 'ma')
 
         rohit = Player('Rohit Sharma')
 
@@ -209,10 +202,8 @@ class GameTest(unittest.TestCase):
 
     def test_player_purchase(self):
         # Setup user, player, game
-        sneha = User('Sneha Yadgire')
-        sneha.username = 'sy'
-        manisha = User('Manisha Auti')
-        manisha.username = 'ma'
+        sneha = User('Sneha Yadgire', 'sy')
+        manisha = User('Manisha Auti', 'ma')
 
         rohit = Player('Rohit Sharma')
         winner = {
@@ -280,9 +271,8 @@ class GameTest(unittest.TestCase):
         users = list()
         players = list()
         for username, owner in user_map.items():
-            db_user = User(owner['name'])
+            db_user = User(owner['name'], username)
             db_user.points = owner['points']
-            db_user.username = username
             users.append(db_user)
         for _, player in enumerate(player_list):
             players.append(Player.from_dict(player))
@@ -546,7 +536,7 @@ class BidTest(unittest.TestCase):
         # Check accept bid errors
         self.assertEqual(Bid.ERROR_INVALID_AMOUNT, accept_bid(bid, None, 0))
         self.assertEqual(Bid.ERROR_SYSTEM, accept_bid(bid, None))
-        test_user = User('Nayan')
+        test_user = User('Nayan', 'nz')
         test_user.username = None
         self.assertEqual(Bid.ERROR_SYSTEM, accept_bid(bid, test_user))
         test_user.username = 'nz'

@@ -254,8 +254,8 @@ def upload_users(user_list):
     # Format of user_list is username, name, password, color, bg_color
     User.delete_all()
     for user_row in user_list:
-        user = User(user_row[1])
-        user.username = user_row[0]
+        user = User(user_row[1], user_row[0])
+        user.set_password(user_row[2])
         user.color = user_row[3]
         user.bg_color = user_row[4]
         user.create()

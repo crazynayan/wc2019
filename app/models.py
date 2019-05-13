@@ -1,37 +1,43 @@
-
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 from firestore_model import FirestoreModel
+from app import login
 
 
-class User(FirestoreModel):
+class User(UserMixin, FirestoreModel):
     INITIAL_BUDGET = 10000
     COLLECTION = 'users'
     DEFAULT = 'name'
 
-    def __init__(self, name):
-        super().__init__(name)
-        self.name = name
-        self.username = name[:2] if len(name) >= 2 else None
+    def __init__(self, name=None, username=None):
+        super().__init__()
+        self.name = name if name else 'No Name'
+        self.username = username if username else '**'
         self.balance = self.INITIAL_BUDGET
         self.points = 0.0
         self.color = 'black'
         self.bg_color = 'white'
         self.player_count = 0
-
-    def to_dict(self):
-        return {
-            'username': self.username,
-            'name': self.name,
-            'balance': self.balance,
-            'points': self.points,
-            'color': self.color,
-            'bg_color': self.bg_color,
-            'player_count': self.player_count
-        }
+        self.password_hash = None
 
     def create(self):
         if self.username is None:
             return None
         return self.update(self.username)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return self.username
+
+
+@login.user_loader
+def load_user(username):
+    return User.query_first(username=username)
 
 
 class Player(FirestoreModel):
@@ -43,9 +49,9 @@ class Player(FirestoreModel):
     PURCHASED = 'purchased'
     UNSOLD = 'unsold'
 
-    def __init__(self, name):
+    def __init__(self, name=None):
         super().__init__(name)
-        self.name = name
+        self.name = name if name else 'No Name'
         self.owner = None
         self.owner_username = None
         self.price = 0
@@ -55,6 +61,8 @@ class Player(FirestoreModel):
         self.bid_order = 0
 
     def create(self):
+        if self.name is None:
+            return None
         return self.update(self.name.replace(' ', '_'))
 
     @classmethod
@@ -150,9 +158,9 @@ class Bid(FirestoreModel):
     ERROR_PLAYER_NOT_AVAILABLE = -12
     ERROR_BID_IN_PROGRESS = -13
 
-    def __init__(self, player_name):
+    def __init__(self, player_name=None):
         super().__init__(player_name)
-        self.player_name = player_name
+        self.player_name = player_name if player_name else 'No Name'
         self.bid_map = list()
         self.usernames = list()
         self.winner = None

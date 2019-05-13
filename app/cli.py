@@ -1,30 +1,39 @@
 import csv
+import click
 from app.main.game_transactions import upload_users
 
 
 def register(app):
     @app.cli.group()
-    def upload():
-        """Upload commands."""
+    def wc():
+        """World Cup commands."""
         pass
 
-    @upload.command()
-    def users():
+    @wc.command()
+    @click.argument('file_name')
+    def upload(file_name):
         """
-        Upload users.
-        Need users.csv in the project folder.
-        Format of the users.csv should be as follows:
-        username, name, password, color, bg_color
+        Upload data.
+        Takes one parameter as file_name which should be a csv file.
+        users.csv - 'username', 'name', 'password', 'color', 'bg_color'.
+        players.csv - To be developed
         """
-        try:
-            with open('users.csv') as csv_file:
-                user_list = list(csv.reader(csv_file))
-        except FileNotFoundError:
-            raise RuntimeError('File users.csv not found.')
+        if not file_name or not isinstance(file_name, str) or file_name[-4:] != '.csv':
+            raise RuntimeError('Requires one parameter as file name which should be a .csv file.')
 
-        if user_list[0] != ['username', 'name', 'password', 'color', 'bg_color']:
-            raise RuntimeError('users.csv is not in the proper format')
+        accepted_files = ['users.csv', 'players.csv']
 
-        upload_users(user_list[1:])
+        if file_name not in accepted_files:
+            raise RuntimeError('Upload of only certain files are accepted. users.csv and players.csv')
+
+        if file_name == 'users.csv':
+            try:
+                with open(file_name) as csv_file:
+                    user_list = list(csv.reader(csv_file))
+            except FileNotFoundError:
+                raise RuntimeError('File users.csv not found.')
+            if user_list[0] != ['username', 'name', 'password', 'color', 'bg_color']:
+                raise RuntimeError('users.csv is not in the proper format')
+            upload_users(user_list[1:])
 
 

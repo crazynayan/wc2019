@@ -11,7 +11,26 @@ World Cup Super League
 {% block navbar %}
 <div class="container">
     <nav class="navbar navbar-dark bg-dark navbar-expand-sm">
-        <a class="navbar-brand" href="{{ url_for('main.index') }}">WCSL</a>
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
+            {% if current_user.is_authenticated %}
+            <div style="background-color:{{ current_user.bg_color }};
+                        color:{{ current_user.color }};
+                        font-weight:bold;
+                        border-radius: 50%;
+                        height: 30px;
+                        width: 33px;
+                        font-size: 17px;
+                        text-align: center;
+                        display: table;
+                    ">
+                <div style="display: table-cell; vertical-align:middle">
+                    {{ current_user.username.upper() }}
+                </div>
+            </div>
+            {% else %}
+            WCSL
+            {% endif %}
+        </a>
         <button class="navbar-toggler" data-toggle="collapse" data-target="#navbarMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -21,12 +40,24 @@ World Cup Super League
                     <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                 </li>
             </ul>
+            <ul class="navbar-nav ml-auto">
+                {% if current_user.is_anonymous %}
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                </li>
+                {% else %}
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+                </li>
+                {% endif %}
+            </ul>
         </div>
     </nav>
 </div>
 {% endblock %}
 
 {% block content %}
+<br>
 <div class="container">
     {% with messages = get_flashed_messages() %}
     {% if messages %}
