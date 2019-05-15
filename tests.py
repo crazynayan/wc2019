@@ -163,7 +163,7 @@ class UserTest(unittest.TestCase):
         for test_user in test_list:
             test_users.append(User.from_dict(test_user))
 
-        db_users = User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
+        db_users = ranked_users_view()
         for index, db_user in enumerate(db_users):
             self.assertDictEqual(test_users[index].to_dict(), db_user.to_dict())
 
@@ -401,8 +401,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(4, pranay.player_count)
 
         # Get pranay player view and check
-        db_players = Player.order_by(('score', Player.ORDER_DESCENDING), ('price', Player.ORDER_DESCENDING),
-                                     query={'owner_username': 'pp'})
+        db_players = purchased_players_view(pranay.username)
         for index, db_player in enumerate(db_players):
             self.assertDictEqual(test_players[index].to_dict(), db_player.to_dict())
 
@@ -588,4 +587,95 @@ class BidTest(unittest.TestCase):
         self.assertIsNone(game.player_in_bidding)
         self.assertFalse(game.bid_in_progress)
         self.assertEqual(0, game.user_to_bid)
+
+
+class UploadTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = create_app(TestConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.upload_data = Upload()
+
+    def tearDown(self) -> None:
+        self.app_context.pop()
+
+    def test_upload_users(self):
+        test_users = {
+            'ag': TestConfig.INITIAL_BUDGET,
+            'as': TestConfig.INITIAL_BUDGET,
+            'fa': TestConfig.INITIAL_BUDGET,
+            'ma': TestConfig.INITIAL_BUDGET,
+            'mb': TestConfig.INITIAL_BUDGET,
+            'nz': TestConfig.INITIAL_BUDGET,
+            'pp': TestConfig.INITIAL_BUDGET,
+            'rd': TestConfig.INITIAL_BUDGET,
+            'sc': TestConfig.INITIAL_BUDGET,
+            'sy': TestConfig.INITIAL_BUDGET,
+        }
+        # Upload
+        result = self.upload_data('users')
+        self.assertEqual(Upload.SUCCESS, result)
+        users = User.get_all()
+        self.assertEqual(len(test_users), len(users))
+        db_users = {}
+        for user in users:
+            db_users[user.username] = user.balance
+        self.assertDictEqual(test_users, db_users)
+        # Test fail codes
+        upload_data = Upload()
+        self.assertEqual(Upload.ERROR_NOT_VALID_TYPE, upload_data())
+        self.assertEqual(Upload.ERROR_NOT_VALID_TYPE, upload_data('test'))
+        Upload.ACCEPTED_TYPES.append('test')
+        self.assertEqual(Upload.ERROR_FILE_NOT_FOUND, upload_data('test'))
+        Upload.ACCEPTED_TYPES.pop()
+
+    def test_upload_players(self):
+        result = self.upload_data('players')
+        self.assertEqual(Upload.SUCCESS, result)
+        players = Player.get_all()
+        self.assertEqual(149, len(players))
+        angelo = Player.query_first(name='Angelo Mathews')
+        self.assertEqual(4.1, angelo.overs_per_match)
+        self.assertEqual(26.5, angelo.runs_per_match)
+        self.assertEqual(0.56, angelo.wickets_per_match)
+        # Test pagination
+        page = available_players_view(25)
+        self.assertEqual(1, page.current_start.bid_order)
+        self.assertEqual(25, page.current_end.bid_order)
+        self.assertEqual(25, len(page.items))
+        self.assertTrue(page.has_next)
+        self.assertFalse(page.has_prev)
+        page = available_players_view(page.per_page, end=page.current_end.doc_id, direction=FirestorePage.NEXT_PAGE)
+        self.assertEqual(26, page.current_start.bid_order)
+        self.assertEqual(50, page.current_end.bid_order)
+        self.assertEqual(25, len(page.items))
+        self.assertTrue(page.has_next)
+        self.assertTrue(page.has_prev)
+        # Go to the end
+        for _ in range(4):
+            page = available_players_view(page.per_page, end=page.current_end.doc_id, direction=FirestorePage.NEXT_PAGE)
+        self.assertEqual(126, page.current_start.bid_order)
+        self.assertEqual(149, page.current_end.bid_order)
+        self.assertEqual(24, len(page.items))
+        self.assertFalse(page.has_next)
+        self.assertTrue(page.has_prev)
+        # Test previous page
+        page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
+        self.assertEqual(101, page.current_start.bid_order)
+        self.assertEqual(125, page.current_end.bid_order)
+        self.assertEqual(25, len(page.items))
+        self.assertTrue(page.has_next)
+        self.assertTrue(page.has_prev)
+        # Go back to the start
+        for _ in range(4):
+            page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
+        self.assertEqual(1, page.current_start.bid_order)
+        self.assertEqual(25, page.current_end.bid_order)
+        self.assertEqual(25, len(page.items))
+        self.assertTrue(page.has_next)
+        self.assertFalse(page.has_prev)
+        # Going beyond start will give you none
+        page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
+        self.assertIsNone(page)
+
 

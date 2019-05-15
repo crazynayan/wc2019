@@ -12,6 +12,7 @@ class User(UserMixin, FirestoreModel):
     def __init__(self, name=None, username=None):
         super().__init__()
         self.name = name if name else 'No Name'
+        self.doc_id = username
         self.username = username if username else '**'
         self.balance = self.INITIAL_BUDGET
         self.points = 0.0
@@ -21,9 +22,7 @@ class User(UserMixin, FirestoreModel):
         self.password_hash = None
 
     def create(self):
-        if self.username is None:
-            return None
-        return self.update(self.username)
+        return self.update()
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -52,6 +51,7 @@ class Player(FirestoreModel):
     def __init__(self, name=None):
         super().__init__(name)
         self.name = name if name else 'No Name'
+        self.doc_id = self.name.replace(' ', '_').lower()
         self.owner = None
         self.owner_username = None
         self.price = 0
@@ -59,11 +59,15 @@ class Player(FirestoreModel):
         self.country = None
         self.score = 0
         self.bid_order = 0
+        self.type = None
+        self.tags = list()
+        self.matches = 0
+        self.runs = 0
+        self.wickets = 0
+        self.balls = 0
 
     def create(self):
-        if self.name is None:
-            return None
-        return self.update(self.name.replace(' ', '_'))
+        return self.update()
 
     @classmethod
     def update_scores(cls, scores):
@@ -77,6 +81,27 @@ class Player(FirestoreModel):
                 player.update_batch()
         Player.commit_batch()
         return True
+
+    @property
+    def overs_per_match(self):
+        if self.balls == 0 or self.matches == 0:
+            return 0
+        balls_per_match = round(self.balls / self.matches)
+        overs = balls_per_match // 6
+        balls = balls_per_match % 6
+        return overs + (balls * 0.1)
+
+    @property
+    def runs_per_match(self):
+        if self.matches == 0:
+            return 0
+        return round(self.runs / self.matches, 2)
+
+    @property
+    def wickets_per_match(self):
+        if self.matches == 0:
+            return 0
+        return round(self.wickets / self.matches, 2)
 
 
 class Game(FirestoreModel):
@@ -101,10 +126,7 @@ class Game(FirestoreModel):
         self.bid_in_progress = False
 
     def create(self):
-        return super().update()
-
-    def update(self, doc_id=None):
-        return super().update()
+        return self.update()
 
     @classmethod
     def read(cls, doc_id=None):
@@ -161,6 +183,7 @@ class Bid(FirestoreModel):
     def __init__(self, player_name=None):
         super().__init__(player_name)
         self.player_name = player_name if player_name else 'No Name'
+        self.doc_id = self.player_name.replace(' ', '_').lower()
         self.bid_map = list()
         self.usernames = list()
         self.winner = None
@@ -171,7 +194,7 @@ class Bid(FirestoreModel):
             self.bid_order = player.bid_order
 
     def create(self):
-        return self.update(self.player_name.replace(' ', '_'))
+        return self.update()
 
     def has_bid(self, username):
         return username in self.usernames

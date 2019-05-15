@@ -8,3 +8,4 @@ secret-key.txt
 *.env
 *.csv
 app/__pycache__/
+static/

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<h3>
+    Available Players
+</h3>
+{% if players %}
+{% include '_pagination.html' %}
+<table class="table table-bordered table-sm table-hover">
+    <thead class="thead-dark">
+    <th scope="col">Bid No.</th>
+    <th scope="col">Name</th>
+    <th scope="col">Type</th>
+    <th scope="col">Country</th>
+    <th scope="col">Tags</th>
+    </thead>
+    <tbody>
+    {% for player in players %}
+    <tr>
+        <td>{{ player.bid_order }}</td>
+        <td>{{ player.name }}</td>
+        <td>{{ player.type }}</td>
+        <td>{{ player.country }}</td>
+        <td>
+            {% for tag in player.tags %}
+            <span class="badge badge-info">{{ tag }}</span>
+            {% endfor %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No players purchased.</p>
+{% endif %}
+{% endblock %}

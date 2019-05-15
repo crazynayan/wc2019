@@ -9,3 +9,6 @@ def get_secret_key():
 class Config:
     SECRET_KEY = get_secret_key() or 'Some secret key.'
     GAC_KEY_PATH = 'firestore-key.json'
+    INITIAL_BUDGET = 10000
+    PER_PAGE = 20
+

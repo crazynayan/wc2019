@@ -1,6 +1,6 @@
 import csv
 import click
-from app.main.game_transactions import upload_users
+from app.main.game_transactions import Upload
 
 
 def register(app):
@@ -10,30 +10,23 @@ def register(app):
         pass
 
     @wc.command()
-    @click.argument('file_name')
-    def upload(file_name):
+    @click.argument('upload_type')
+    def upload(upload_type):
         """
         Upload data.
-        Takes one parameter as file_name which should be a csv file.
-        users.csv - 'username', 'name', 'password', 'color', 'bg_color'.
-        players.csv - To be developed
+        UPLOAD_TYPE can be [users | players | scores]\n
+        File name as <UPLOAD_TYPE>.csv should exists in the current project folder.\n
+        users.csv - 'username', 'name', 'password', 'color', 'bg_color'.\n
+        players.csv - 'name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order'\n
+        scores.csv - To be developed\n
         """
-        if not file_name or not isinstance(file_name, str) or file_name[-4:] != '.csv':
-            raise RuntimeError('Requires one parameter as file name which should be a .csv file.')
+        if not upload_type or not isinstance(upload_type, str):
+            raise RuntimeError('Requires one parameter as a upload type.')
 
-        accepted_files = ['users.csv', 'players.csv']
+        if upload_type not in Upload.ACCEPTED_TYPES:
+            raise RuntimeError('Upload of only certain types are accepted. users, players, scores are valid options.')
 
-        if file_name not in accepted_files:
-            raise RuntimeError('Upload of only certain files are accepted. users.csv and players.csv')
-
-        if file_name == 'users.csv':
-            try:
-                with open(file_name) as csv_file:
-                    user_list = list(csv.reader(csv_file))
-            except FileNotFoundError:
-                raise RuntimeError('File users.csv not found.')
-            if user_list[0] != ['username', 'name', 'password', 'color', 'bg_color']:
-                raise RuntimeError('users.csv is not in the proper format')
-            upload_users(user_list[1:])
-
-
+        upload_data = Upload()
+        result = upload_data(upload_type)
+        if result != Upload.SUCCESS:
+            raise RuntimeError('Some error in upload.')

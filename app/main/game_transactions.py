@@ -1,6 +1,9 @@
+import csv
 from firebase_admin import firestore
 from flask import current_app
+from firestore_model import FirestorePage
 from app.models import Game, User, Player, Bid
+
 
 
 @firestore.transactional
@@ -234,7 +237,7 @@ def accept_bid(bid, user, amount=Bid.PASS):
 def invite_bid():
     db = firestore.client(current_app.db_app)
     transaction = db.transaction()
-    available_players = Player.order_by('bid_order', query=({'status': Player.AVAILABLE}))
+    available_players = available_players_view()
     if not available_players:
         return Bid.ERROR_NO_MORE_PLAYERS
     bid_result = invite_bid_transaction(transaction, available_players[0])
@@ -250,17 +253,113 @@ def ranked_users_view():
     return User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
 
 
-def upload_users(user_list):
-    # Format of user_list is username, name, password, color, bg_color
-    User.delete_all()
-    for user_row in user_list:
-        user = User(user_row[1], user_row[0])
-        user.set_password(user_row[2])
-        user.color = user_row[3]
-        user.bg_color = user_row[4]
-        user.create()
-
-
 def purchased_players_view(username):
     return Player.order_by(('score', User.ORDER_DESCENDING), ('price', User.ORDER_DESCENDING),
                            query={'owner_username': username})
+
+
+def available_players_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
+    if per_page is None or direction not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
+        return Player.order_by('bid_order', query=({'status': Player.AVAILABLE}))
+    page = FirestorePage(per_page)
+    if start:
+        page.current_start = Player.read(start)
+    if end:
+        page.current_end = Player.read(end)
+    page.want = direction
+    page = Player.order_by('bid_order', query=({'status': Player.AVAILABLE}), page=page)
+    if len(page.items) == 0:
+        return None
+    return page
+
+
+class Upload:
+    ACCEPTED_TYPES = [
+        'users',
+        'players',
+        'scores',
+    ]
+    SUCCESS = 0
+    ERROR_NOT_VALID_TYPE = -1
+    ERROR_FILE_NOT_FOUND = -2
+    ERROR_INVALID_HEADER = -3
+
+    def __init__(self, upload_type=None):
+        self.type = upload_type
+        self.data_list = None
+
+    def __call__(self, upload_type=None):
+        if upload_type is not None:
+            self.type = upload_type
+        if not self.type or self.type not in self.ACCEPTED_TYPES:
+            return self.ERROR_NOT_VALID_TYPE
+        self.file_name = upload_type + '.csv'
+        try:
+            with open(self.file_name) as csv_file:
+                self.data_list = list(csv.reader(csv_file))
+        except FileNotFoundError:
+            return self.ERROR_FILE_NOT_FOUND
+        upload_function = 'upload_' + self.type
+        return getattr(self, upload_function)()
+
+    def upload_users(self):
+        # Index of columns         0            1        2          3         4
+        if self.data_list[0] != ['username', 'name', 'password', 'color', 'bg_color']:
+            return self.ERROR_INVALID_HEADER
+        User.delete_all()
+        User.init_batch()
+        for user_row in self.data_list[1:]:
+            user = User(user_row[1].strip(), user_row[0].strip())
+            user.set_password(user_row[2])
+            user.color = user_row[3].strip().lower()
+            user.bg_color = user_row[4].strip().lower()
+            user.update_batch()
+        User.commit_batch()
+        return self.SUCCESS
+
+    def upload_players(self):
+        # Index of columns         0         1         2       3        4         5         6        7        8
+        if self.data_list[0] != ['name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order']:
+            return self.ERROR_INVALID_HEADER
+        Player.delete_all()
+        Player.init_batch()
+        for player_row in self.data_list[1:]:
+            # if player_row[0] != 'Andre Russel':
+            #     continue
+            player = Player(player_row[0].strip())
+            player.country = player_row[1].strip()
+            player.type = player_row[2].strip()
+            tags = [tag.strip().lower() for tag in player_row[3].split(';') if len(tag) > 0]
+            tags.append(player.country.lower())
+            tags.append(player.name.lower())
+            if player.type.lower() not in player_row[3].lower():
+                tags.append(player.type.lower())
+            player.tags = tags
+            try:
+                player.matches = int(player_row[4])
+            except ValueError:
+                pass
+            try:
+                player.runs = int(player_row[5])
+            except ValueError:
+                pass
+            try:
+                player.wickets = int(player_row[6])
+            except ValueError:
+                pass
+            try:
+                player.balls = int(player_row[7])
+            except ValueError:
+                pass
+            try:
+                player.bid_order = int(player_row[8])
+            except ValueError:
+                pass
+            player.update_batch()
+        Player.commit_batch()
+        return self.SUCCESS
+
+    def upload_scores(self):
+        pass
+
+

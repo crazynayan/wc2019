@@ -8,6 +8,7 @@ class FirestoreModel:
     # DEFAULT FIELD can be overridden if the default name of the field needs a change
     DEFAULT = 'name'
     BATCH = None
+    DELETE_BATCH_SIZE = 10
     ORDER_ASCENDING = firestore.Query.ASCENDING
     ORDER_DESCENDING = firestore.Query.DESCENDING
     try:
@@ -139,15 +140,16 @@ class FirestoreModel:
         return models
 
     @classmethod
-    def order_by(cls, *criteria, query={}):
+    def order_by(cls, *criteria, query={}, page=None):
         doc_ref = cls.db.collection(cls.COLLECTION)
         if query:
             for field in query:
                 if field in cls().__dict__ and field != 'doc_id':
                     doc_ref = doc_ref.where(field, '==', query[field])
+        saved_ref = doc_ref
+        field = None
+        order = None
         for criterion in criteria:
-            field = None
-            order = None
             if isinstance(criterion, str):
                 field = criterion
                 order = cls.ORDER_ASCENDING
@@ -162,13 +164,80 @@ class FirestoreModel:
         # Multiple criteria for order will raise an exception if composite index not defined.
         # The exception is NOT caught here since it will help the developer to create the composite index
         # All scenarios for multiple order_by is recommended to be tested in unittest.
-        docs = doc_ref.stream()
+        if page is None or not isinstance(page, FirestorePage) or len(criteria) != 1\
+                or page.want not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
+            docs = doc_ref.stream()
+            models = list()
+            for doc in docs:
+                model = cls.from_dict(doc.to_dict())
+                model.doc_id = doc.id
+                models.append(model)
+            return models
+        # Pagination logic
+        if page.want == FirestorePage.NEXT_PAGE or page.current_start is None:
+            if page.current_end is None:
+                query = doc_ref.limit(page.per_page)
+            else:
+                end_ref, _ = page.current_end.get_doc()
+                query = doc_ref.limit(page.per_page).start_after(end_ref.get())
+            models = list()
+            for doc in query.stream():
+                model = cls.from_dict(doc.to_dict())
+                model.doc_id = doc.id
+                models.append(model)
+                if len(models) == 1:
+                    page.current_start = model
+                page.current_end = model
+            try:
+                end_ref, _ = page.current_end.get_doc()
+                next(doc_ref.limit(1).start_after(end_ref.get()).stream())
+                page.has_next = True
+            except StopIteration:
+                page.has_next = False
+            try:
+                reverse = cls.ORDER_ASCENDING if order == cls.ORDER_DESCENDING else cls.ORDER_DESCENDING
+                reverse_ref = saved_ref.order_by(field, direction=reverse)
+                end_ref, _ = page.current_start.get_doc()
+                next(reverse_ref.limit(1).start_after(end_ref.get()).stream())
+                page.has_prev = True
+            except StopIteration:
+                page.has_prev = False
+            page.items = models
+            return page
+        # Previous Page logic
+        if order == cls.ORDER_DESCENDING:
+            reverse = cls.ORDER_ASCENDING
+            reverse_sort = True
+        else:
+            reverse = cls.ORDER_DESCENDING
+            reverse_sort = False
+        reverse_ref = saved_ref.order_by(field, direction=reverse)
+        start_ref, _ = page.current_start.get_doc()
+        query = reverse_ref.limit(page.per_page).start_after(start_ref.get())
         models = list()
-        for doc in docs:
+        for doc in query.stream():
             model = cls.from_dict(doc.to_dict())
             model.doc_id = doc.id
             models.append(model)
-        return models
+            if len(models) == 1:
+                page.current_end = model
+            page.current_start = model
+        try:
+            start_ref, _ = page.current_start.get_doc()
+            next(reverse_ref.limit(1).start_after(start_ref.get()).stream())
+            page.has_prev = True
+        except StopIteration:
+            page.has_prev = False
+        try:
+            end_ref, _ = page.current_start.get_doc()
+            next(doc_ref.limit(1).start_after(end_ref.get()).stream())
+            page.has_next = True
+        except StopIteration:
+            page.has_next = False
+        if len(models) > 0:
+            models.sort(key=lambda item: getattr(item, field), reverse=reverse_sort)
+        page.items = models
+        return page
 
     @classmethod
     def query_first(cls, **kwargs):
@@ -186,9 +255,15 @@ class FirestoreModel:
         return model
 
     @classmethod
-    def delete_all(cls):
-        for doc in cls.db.collection(cls.COLLECTION).stream():
+    def delete_all(cls, batch_size=None):
+        if batch_size is None or batch_size < 1:
+            batch_size = cls.DELETE_BATCH_SIZE
+        deleted = 0
+        for doc in cls.db.collection(cls.COLLECTION).limit(batch_size).stream():
             doc.reference.delete()
+            deleted += 1
+        if deleted == batch_size:   # if more to delete
+            return cls.delete_all(batch_size)
 
     @classmethod
     def init_batch(cls):
@@ -210,6 +285,23 @@ class FirestoreModel:
         cls.BATCH.commit()
         cls.BATCH = None
         return True
+
+
+class FirestorePage:
+    PER_PAGE = 25
+    NEXT_PAGE = 1
+    PREV_PAGE = -1
+
+    def __init__(self, per_page=None):
+        self.per_page = per_page if per_page is not None else self.PER_PAGE
+        self.current_start = None
+        self.current_end = None
+        self.has_next = False
+        self.has_prev = False
+        self.items = None
+        self.want = self.NEXT_PAGE
+
+
 
 
 
