@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<h3>
+    Past Bids
+</h3>
+{% if bids %}
+{% include '_pagination.html' %}
+<table class="table table-bordered table-sm table-hover">
+    <thead class="thead-dark">
+    <th scope="col">Name</th>
+    {% for bid_username in bids[0].bid_map %}
+    <th scope="col" style="text-align:center">
+        {{ bid_username.username.upper() }}
+    </th>
+    {% endfor %}
+    </thead>
+    <tbody>
+    {% for bid in bids %}
+    <tr>
+        <td >{{ bid.player_name }}</td>
+        {% for bid_amount in bid.bid_map %}
+        {% if bid_amount.username == bid.winner %}
+        <td style="text-align:center" class="table-success">
+            <strong>{{ bid_amount.amount }}</strong>
+        </td>
+        {% else %}
+        <td style="text-align:center" >{{ bid_amount.amount }}</td>
+        {% endif %}
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No players available for auction.</p>
+{% endif %}
+{% endblock %}

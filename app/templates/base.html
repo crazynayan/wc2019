@@ -42,6 +42,12 @@ World Cup Super League
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.available_players') }}">Available</a>
                 </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('main.bid_player') }}">Bid</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('main.show_bids') }}">Bids</a>
+                </li>
             </ul>
             <ul class="navbar-nav ml-auto">
                 {% if current_user.is_anonymous %}
@@ -72,7 +78,49 @@ World Cup Super League
     {% endif %}
     {% endwith %}
 
+    {% if current_user.is_authenticated %}
+    {% if g.game.bid_in_progress %}
+    {% if g.game.last_player %}
+    <div class="alert alert-success" role="alert">
+        <strong><span id="last_player">{{ g.game.last_player }}</span></strong>
+        was purchased by
+        <strong><span id="last_winner">{{ g.game.last_winner }}</span></strong>
+        @ &#8377
+        <strong><span id="last_price">{{ g.game.last_price }}</span></strong> lacs.
+    </div>
+    {% endif %}
+    <div class="alert alert-warning" role="alert">
+        <strong><span id="current_player">{{ g.game.player_in_bidding }}</span></strong>
+        is still awaiting bid from
+        <strong><span id="user_to_bid">{{ g.game.user_to_bid }}</span></strong>
+        users.
+    </div>
+    {% endif %}
+    {% endif %}
+
     {% block app_content %}
     {% endblock %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    {% if current_user.is_authenticated %}
+    {% if g.game.bid_in_progress %}
+    $(function() {
+        setInterval(function() {
+            $.ajax('{{ url_for('main.game_status') }}').done(function(game) {
+                $('#last_player').text(game.last_player);
+                $('#last_winner').text(game.last_winner);
+                $('#last_price').text(game.last_price);
+                $('#current_player').text(game.player_in_bidding);
+                $('#user_to_bid').text(game.user_to_bid);
+            });
+        }, 10000);
+    });
+    {% endif %}
+    {% endif %}
+</script>
+
 {% endblock %}

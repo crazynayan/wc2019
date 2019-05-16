@@ -5,7 +5,6 @@ from firestore_model import FirestorePage
 from app.models import Game, User, Player, Bid
 
 
-
 @firestore.transactional
 def purchase_player_transaction(transaction, player, user=None, amount=0):
     player_ref, player_snapshot = player.get_doc(transaction)
@@ -146,15 +145,17 @@ def invite_bid_transaction(transaction, player):
     zero_balance_users = User.query(balance=0)
     if zero_balance_users:
         bid_ref, bid_snapshot = bid.get_doc(transaction)
+        bid_updates = {
+            'bid_map': bid_snapshot.get('bid_map'),
+            'usernames': bid_snapshot.get('usernames'),
+        }
         for user in zero_balance_users:
             zero_bid = {
                 'username': user.username,
                 'amount': Bid.NO_BALANCE,
             }
-            bid_updates = {
-                'bid_map': bid_snapshot.get('bid_map').append(zero_bid),
-                'usernames': bid_snapshot.get('usernames').append(user.usernames),
-            }
+            bid_updates['bid_map'].append(zero_bid),
+            bid_updates['usernames'].append(user.username),
             game_updates['user_to_bid'] -= 1
         transaction.update(bid_ref, bid_updates)
     transaction.update(player_ref, player_updates)
@@ -273,12 +274,37 @@ def available_players_view(per_page=None, start='', end='', direction=FirestoreP
     return page
 
 
+def bids_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
+    if per_page is None or direction not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
+        bids = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING), query=({'status': Player.PURCHASED}))
+        for bid in bids:
+            bid.bid_map.sort(key=lambda item: item['username'])
+        return bids
+    page = FirestorePage(per_page)
+    if start:
+        page.current_start = Bid.read(start)
+    if end:
+        page.current_end = Bid.read(end)
+    page.want = direction
+    page = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING), query=({'status': Player.PURCHASED}), page=page)
+    if len(page.items) == 0:
+        return None
+    for bid in page.items:
+        bid.bid_map.sort(key=lambda item: item['username'])
+    return page
+
+
 class Upload:
     ACCEPTED_TYPES = [
         'users',
         'players',
         'scores',
     ]
+    INIT_GAME = {
+        'users': True,
+        'players': True,
+        'scores': False,
+    }
     SUCCESS = 0
     ERROR_NOT_VALID_TYPE = -1
     ERROR_FILE_NOT_FOUND = -2
@@ -322,6 +348,7 @@ class Upload:
         if self.data_list[0] != ['name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order']:
             return self.ERROR_INVALID_HEADER
         Player.delete_all()
+        Bid.delete_all()
         Player.init_batch()
         for player_row in self.data_list[1:]:
             # if player_row[0] != 'Andre Russel':

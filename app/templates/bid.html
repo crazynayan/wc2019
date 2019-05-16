@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+<h4>
+    {{ bid.player_name }}
+</h4>
+
+{% if form %}
+<form action="" method="post" class="form-inline" role="form" novalidate>
+    {{ form.csrf_token() }}
+    <div class="form-group">
+    {{ wtf.form_field(form.amount, class='form-control', placeholder='0 to pass') }}
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<br>
+Estimated Average Player Bid (APB) is &#8377 <strong>{{ g.game.avg_player_bid }}</strong> lacs.
+{% endif %}
+
+{% endblock %}

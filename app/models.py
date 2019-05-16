@@ -197,6 +197,8 @@ class Bid(FirestoreModel):
         return self.update()
 
     def has_bid(self, username):
+        if not self.usernames:
+            return False
         return username in self.usernames
 
     def is_bid_complete(self, user_count):

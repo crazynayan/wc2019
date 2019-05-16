@@ -192,7 +192,7 @@ class FirestoreModel:
                 end_ref, _ = page.current_end.get_doc()
                 next(doc_ref.limit(1).start_after(end_ref.get()).stream())
                 page.has_next = True
-            except StopIteration:
+            except (StopIteration, AttributeError):
                 page.has_next = False
             try:
                 reverse = cls.ORDER_ASCENDING if order == cls.ORDER_DESCENDING else cls.ORDER_DESCENDING
@@ -200,7 +200,7 @@ class FirestoreModel:
                 end_ref, _ = page.current_start.get_doc()
                 next(reverse_ref.limit(1).start_after(end_ref.get()).stream())
                 page.has_prev = True
-            except StopIteration:
+            except (StopIteration, AttributeError):
                 page.has_prev = False
             page.items = models
             return page
@@ -226,13 +226,13 @@ class FirestoreModel:
             start_ref, _ = page.current_start.get_doc()
             next(reverse_ref.limit(1).start_after(start_ref.get()).stream())
             page.has_prev = True
-        except StopIteration:
+        except (StopIteration, AttributeError):
             page.has_prev = False
         try:
             end_ref, _ = page.current_start.get_doc()
             next(doc_ref.limit(1).start_after(end_ref.get()).stream())
             page.has_next = True
-        except StopIteration:
+        except (StopIteration, AttributeError):
             page.has_next = False
         if len(models) > 0:
             models.sort(key=lambda item: getattr(item, field), reverse=reverse_sort)

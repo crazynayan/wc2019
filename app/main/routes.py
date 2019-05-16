@@ -1,8 +1,17 @@
-from flask import render_template, request, url_for
-from flask_login import login_required
+from flask import render_template, request, url_for, flash, redirect, jsonify, g
+from flask_login import login_required, current_user
 from app.main import bp
+from app.main.forms import BidForm
 from app.main.game_transactions import *
 from config import Config
+
+
+@bp.before_request
+def before_request():
+    game = Game.read()
+    if game is None:
+        game = Game.init_game()
+    g.game = game
 
 
 @bp.route('/')
@@ -17,6 +26,7 @@ def index():
 
 
 @bp.route('/users/<username>/players')
+@login_required
 def purchased_players(username):
     template = 'players.html'
     title = 'Players'
@@ -25,6 +35,7 @@ def purchased_players(username):
 
 
 @bp.route('/players')
+@login_required
 def available_players():
     template = 'available.html'
     title = 'Players'
@@ -32,6 +43,8 @@ def available_players():
     start_id = request.args.get('start', '')
     end_id = request.args.get('end', '')
     page = available_players_view(Config.PER_PAGE, start=start_id, end=end_id, direction=direction)
+    if not page:
+        return render_template(template, title=title)
     next_url = None
     prev_url = None
     if page.has_next:
@@ -39,3 +52,53 @@ def available_players():
     if page.has_prev:
         prev_url = url_for('main.available_players', start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
     return render_template(template, title=title, players=page.items, next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/bid', methods=['GET', 'POST'])
+@login_required
+def bid_player():
+    template = 'bid.html'
+    title = 'Bid'
+    if not g.game.bid_in_progress:
+        flash("No bid in progress")
+        return redirect(url_for('main.index'))
+    bid = Bid.query_first(player_name=g.game.player_in_bidding)
+    if bid.has_bid(current_user.username):
+        flash(f"You have already bid. Please wait for other {g.game.user_to_bid} users to bid.")
+        return render_template(template, title=title, bid=bid)
+    bid_form = BidForm(current_user.balance)
+    if not bid_form.validate_on_submit():
+        if bid_form.amount.errors:
+            for error in bid_form.amount.errors:
+                flash(error)
+        return render_template(template, title=title, bid=bid, form=bid_form)
+    amount = bid_form.amount.data if bid_form.amount.data else Bid.PASS
+    accept_bid(bid, current_user, amount)
+    flash(f'Your bid for {bid.player_name} was submitted successfully.')
+    return redirect(url_for('main.available_players'))
+
+
+@bp.route('/bids')
+@login_required
+def show_bids():
+    template = 'bids.html'
+    title = 'Bids'
+    direction = request.args.get('direction', FirestorePage.NEXT_PAGE, type=int)
+    start_id = request.args.get('start', '')
+    end_id = request.args.get('end', '')
+    page = bids_view(Config.PER_PAGE, start=start_id, end=end_id, direction=direction)
+    if not page:
+        return render_template(template, title=title)
+    next_url = None
+    prev_url = None
+    if page.has_next:
+        next_url = url_for('main.show_bids', end=page.current_end.doc_id)
+    if page.has_prev:
+        prev_url = url_for('main.show_bids', start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
+    return render_template(template, title=title, bids=page.items, next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/game_status')
+@login_required
+def game_status():
+    return jsonify(g.game.to_dict())

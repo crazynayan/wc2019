@@ -1,6 +1,6 @@
-import csv
 import click
-from app.main.game_transactions import Upload
+from app.main.game_transactions import Upload, invite_bid
+from app.models import Game
 
 
 def register(app):
@@ -30,3 +30,15 @@ def register(app):
         result = upload_data(upload_type)
         if result != Upload.SUCCESS:
             raise RuntimeError('Some error in upload.')
+        if Upload.INIT_GAME[upload_type]:
+            Game.init_game()
+
+    @wc.command()
+    def bid():
+        """ Invite players for bid. """
+        game = Game.read()
+        if game is None:
+            game = Game.init_game()
+        if game.bid_in_progress:
+            raise RuntimeError('Bid is already in progress.')
+        invite_bid()
