@@ -694,4 +694,10 @@ class UploadTest(unittest.TestCase):
         page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
         self.assertIsNone(page)
 
+    def test_player_image(self):
+        players = Player.get_all()
+        for player in players:
+            if player.country == 'Sri Lanka':
+                self.assertIsNotNone(player.image_file, f'{player.name}')
+
 

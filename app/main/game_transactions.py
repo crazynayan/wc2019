@@ -360,8 +360,8 @@ class Upload:
         return self.SUCCESS
 
     def upload_players(self):
-        # Index   0        1         2       3       4         5           6            7        8        9         10
-        hdr = ['name', 'country', 'type', 'tags', 'color', 'bg_color', 'bid_order', 'matches', 'runs', 'wickets', 'balls']
+        # Index   0        1         2       3       4         5          6         7           8        9         10       11        12
+        hdr = ['name', 'country', 'type', 'tags', 'color', 'bg_color', 'rank', 'bid_order', 'matches', 'runs', 'wickets', 'balls', 'catches']
         if self.data_list[0] != hdr:
             return self.ERROR_INVALID_HEADER
         Player.delete_all()
@@ -379,23 +379,35 @@ class Upload:
             player.color = player_row[4]
             player.bg_color = player_row[5]
             try:
-                player.bid_order = int(player_row[6])
+                player.rank = int(player_row[6])
             except ValueError:
                 pass
             try:
-                player.matches = int(player_row[7])
+                player.bid_order = int(player_row[7])
             except ValueError:
                 pass
             try:
-                player.runs = int(player_row[8])
+                player.bid_order = int(player_row[7])
             except ValueError:
                 pass
             try:
-                player.wickets = int(player_row[9])
+                player.matches = int(player_row[8])
             except ValueError:
                 pass
             try:
-                player.balls = int(player_row[10])
+                player.runs = int(player_row[9])
+            except ValueError:
+                pass
+            try:
+                player.wickets = int(player_row[10])
+            except ValueError:
+                pass
+            try:
+                player.balls = int(player_row[11])
+            except ValueError:
+                pass
+            try:
+                player.catches = int(player_row[12])
             except ValueError:
                 pass
             player.update_batch()

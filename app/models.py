@@ -62,12 +62,14 @@ class Player(FirestoreModel):
         self.bid_order = 0
         self.bg_color = 'white'
         self.color = 'black'
+        self.rank = 0
         self.type = None
         self.tags = list()
         self.matches = 0
         self.runs = 0
         self.wickets = 0
         self.balls = 0
+        self.catches = 0
 
     def create(self):
         return self.update()

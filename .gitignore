@@ -9,3 +9,4 @@ secret-key.txt
 *.csv
 app/__pycache__/
 static/
+.gcloudignore
