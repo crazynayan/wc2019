@@ -25,7 +25,13 @@
             <strong>{{ bid_amount.amount }}</strong>
         </td>
         {% else %}
-        <td style="text-align:center" >{{ bid_amount.amount }}</td>
+        <td style="text-align:center" >
+            {% if bid_amount.amount < 0 %}
+            -
+            {% else %}
+            {{ bid_amount.amount }}
+            {% endif %}
+        </td>
         {% endif %}
         {% endfor %}
     </tr>

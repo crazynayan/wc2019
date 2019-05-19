@@ -28,7 +28,7 @@ def index():
 @bp.route('/users/<username>/players')
 @login_required
 def purchased_players(username):
-    template = 'players.html'
+    template = 'purchased.html'
     title = 'Players'
     players = purchased_players_view(username)
     return render_template(template, title=title, players=players)
@@ -54,6 +54,15 @@ def available_players():
     return render_template(template, title=title, players=page.items, next_url=next_url, prev_url=prev_url)
 
 
+@bp.route('/players/<player_id>')
+@login_required
+def player_profile(player_id):
+    template = 'player.html'
+    player = player_view(player_id)
+    title = player.name
+    return render_template(template, title=title, player=player)
+
+
 @bp.route('/bid', methods=['GET', 'POST'])
 @login_required
 def bid_player():
@@ -65,16 +74,18 @@ def bid_player():
     bid = Bid.query_first(player_name=g.game.player_in_bidding)
     if bid.has_bid(current_user.username):
         flash(f"You have already bid. Please wait for other {g.game.user_to_bid} users to bid.")
-        return render_template(template, title=title, bid=bid)
+        return redirect(url_for('main.available_players'))
+    player = Player.read(bid.doc_id)
     bid_form = BidForm(current_user.balance)
+    pending = [User.read(username).name for username in g.game.users_to_bid]
     if not bid_form.validate_on_submit():
         if bid_form.amount.errors:
             for error in bid_form.amount.errors:
                 flash(error)
-        return render_template(template, title=title, bid=bid, form=bid_form)
+        return render_template(template, title=title, bid=bid, form=bid_form, player=player, pending=pending)
     amount = bid_form.amount.data if bid_form.amount.data else Bid.PASS
     accept_bid(bid, current_user, amount)
-    flash(f'Your bid for {bid.player_name} was submitted successfully.')
+    flash(f'Your bid for {bid.player_name} was submitted.')
     return redirect(url_for('main.available_players'))
 
 
@@ -101,4 +112,5 @@ def show_bids():
 @bp.route('/game_status')
 @login_required
 def game_status():
-    return jsonify(g.game.to_dict())
+    game_dict = g.game.to_dict()
+    return jsonify(game_dict)

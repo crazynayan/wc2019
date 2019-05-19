@@ -7,15 +7,17 @@
 </h4>
 
 {% if form %}
-<form action="" method="post" class="form-inline" role="form" novalidate>
-    {{ form.csrf_token() }}
-    <div class="form-group">
-    {{ wtf.form_field(form.amount, class='form-control', placeholder='0 to pass') }}
-    </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
-<br>
-Estimated Average Player Bid (APB) is &#8377 <strong>{{ g.game.avg_player_bid }}</strong> lacs.
+    {{ wtf.quick_form(form, form_type="horizontal", horizontal_columns=('lg',0,5)) }}
+<p>
+    Suggested Bid Price is &#8377 <strong>{{ g.game.avg_player_bid }}</strong> lacs.
+</p>
+<p>
+    Your balance is &#8377 <strong>{{ current_user.balance }}</strong> lacs.
+</p>
+{% endif %}
+
+{% if player %}
+{% include '_player_profile.html' %}
 {% endif %}
 
 {% endblock %}

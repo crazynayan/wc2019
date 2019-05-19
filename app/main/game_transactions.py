@@ -1,4 +1,5 @@
 import csv
+import random
 from firebase_admin import firestore
 from flask import current_app
 from firestore_model import FirestorePage
@@ -35,7 +36,7 @@ def purchase_player_transaction(transaction, player, user=None, amount=0):
             'balance': user_snapshot.get('balance') - amount,
             'player_count': user_snapshot.get('player_count') + 1,
         }
-        last_winner = user_snapshot.get('name')
+        last_winner = user_snapshot.get('username').upper()
     else:
         player_updates = {
             'status': player.UNSOLD
@@ -140,6 +141,7 @@ def invite_bid_transaction(transaction, player):
         'bid_in_progress': True,
         'user_to_bid': game_snapshot.get('user_count'),
         'player_in_bidding': player_snapshot.get('name'),
+        'users_to_bid': [user.username for user in User.get_all()]
     }
     # Auto bid for zero balance
     zero_balance_users = User.query(balance=0)
@@ -147,7 +149,6 @@ def invite_bid_transaction(transaction, player):
         bid_ref, bid_snapshot = bid.get_doc(transaction)
         bid_updates = {
             'bid_map': bid_snapshot.get('bid_map'),
-            'usernames': bid_snapshot.get('usernames'),
         }
         for user in zero_balance_users:
             zero_bid = {
@@ -155,8 +156,8 @@ def invite_bid_transaction(transaction, player):
                 'amount': Bid.NO_BALANCE,
             }
             bid_updates['bid_map'].append(zero_bid),
-            bid_updates['usernames'].append(user.username),
             game_updates['user_to_bid'] -= 1
+            game_updates['users_to_bid'].remove(user.username)
         transaction.update(bid_ref, bid_updates)
     transaction.update(player_ref, player_updates)
     transaction.update(game_ref, game_updates)
@@ -177,7 +178,7 @@ def accept_bid_transaction(transaction, bid, user, amount):
     # Validate (Does NOT validate if the user exists in the db)
     if not bid_snapshot or not user or not user.username:
         return Bid.ERROR_SYSTEM
-    if bid_snapshot.get('usernames') and user.username in bid_snapshot.get('usernames'):
+    if user.username not in game_snapshot.get('users_to_bid'):
         return Bid.ERROR_ALREADY_BID
     if user.balance < amount:
         return Bid.ERROR_NO_BALANCE
@@ -194,16 +195,15 @@ def accept_bid_transaction(transaction, bid, user, amount):
     if bid_snapshot.get('bid_map'):
         bid_list = bid_snapshot.get('bid_map')
         bid_list.append(user_bid)
-    user_list = [user.username]
-    if bid_snapshot.get('usernames'):
-        user_list = bid_snapshot.get('usernames')
-        user_list.append(user.username)
+    user_list = game_snapshot.get('users_to_bid')
+    if user_list:
+        user_list.remove(user.username)
     bid_updates = {
         'bid_map': bid_list,
-        'usernames': user_list,
     }
     game_updates = {
         'user_to_bid': game_snapshot.get('user_to_bid') - 1,
+        'users_to_bid': user_list,
     }
     transaction.update(bid_ref, bid_updates)
     transaction.update(game_ref, game_updates)
@@ -226,6 +226,10 @@ def accept_bid(bid, user, amount=Bid.PASS):
     if winning_bid['amount'] < 1:
         purchase_player_transaction(transaction, player)
     else:
+        winning_bids = [bid_dict for bid_dict in bid.bid_map if bid_dict['amount'] == winning_bid['amount']]
+        if len(winning_bids) > 1:
+            winning_index = random.randrange(0, len(winning_bids))
+            winning_bid = winning_bids[winning_index]
         winner = User.query_first(username=winning_bid['username'])
         purchase_player_transaction(transaction, player, winner, winning_bid['amount'])
         bid.winner = winning_bid['username']
@@ -259,6 +263,10 @@ def purchased_players_view(username):
                            query={'owner_username': username})
 
 
+def player_view(player_id):
+    return Player.read(player_id)
+
+
 def available_players_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
     if per_page is None or direction not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
         return Player.order_by('bid_order', query=({'status': Player.AVAILABLE}))
@@ -276,7 +284,9 @@ def available_players_view(per_page=None, start='', end='', direction=FirestoreP
 
 def bids_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
     if per_page is None or direction not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
-        bids = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING), query=({'status': Player.PURCHASED}))
+        bids = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING))
+        if not bids[0].is_bid_complete(Game.read().user_count):
+            bids = bids[1:]
         for bid in bids:
             bid.bid_map.sort(key=lambda item: item['username'])
         return bids
@@ -286,9 +296,11 @@ def bids_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE
     if end:
         page.current_end = Bid.read(end)
     page.want = direction
-    page = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING), query=({'status': Player.PURCHASED}), page=page)
+    page = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING), page=page)
     if len(page.items) == 0:
         return None
+    if not page.items[0].is_bid_complete(Game.read().user_count):
+        page.items = page.items[1:]
     for bid in page.items:
         bid.bid_map.sort(key=lambda item: item['username'])
     return page
@@ -335,55 +347,60 @@ class Upload:
         User.delete_all()
         User.init_batch()
         for user_row in self.data_list[1:]:
-            user = User(user_row[1].strip(), user_row[0].strip())
+            user = User(name=user_row[1].strip(), username=user_row[0].strip())
             user.set_password(user_row[2])
             user.color = user_row[3].strip().lower()
             user.bg_color = user_row[4].strip().lower()
             user.update_batch()
         User.commit_batch()
+        game = Game.read()
+        if not game:
+            game = Game.init_game()
+        game.set_user_count()
         return self.SUCCESS
 
     def upload_players(self):
-        # Index of columns         0         1         2       3        4         5         6        7        8
-        if self.data_list[0] != ['name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order']:
+        # Index   0        1         2       3       4         5           6            7        8        9         10
+        hdr = ['name', 'country', 'type', 'tags', 'color', 'bg_color', 'bid_order', 'matches', 'runs', 'wickets', 'balls']
+        if self.data_list[0] != hdr:
             return self.ERROR_INVALID_HEADER
         Player.delete_all()
         Bid.delete_all()
         Player.init_batch()
         for player_row in self.data_list[1:]:
-            # if player_row[0] != 'Andre Russel':
-            #     continue
             player = Player(player_row[0].strip())
             player.country = player_row[1].strip()
             player.type = player_row[2].strip()
             tags = [tag.strip().lower() for tag in player_row[3].split(';') if len(tag) > 0]
             tags.append(player.country.lower())
-            tags.append(player.name.lower())
             if player.type.lower() not in player_row[3].lower():
                 tags.append(player.type.lower())
             player.tags = tags
+            player.color = player_row[4]
+            player.bg_color = player_row[5]
             try:
-                player.matches = int(player_row[4])
+                player.bid_order = int(player_row[6])
             except ValueError:
                 pass
             try:
-                player.runs = int(player_row[5])
+                player.matches = int(player_row[7])
             except ValueError:
                 pass
             try:
-                player.wickets = int(player_row[6])
+                player.runs = int(player_row[8])
             except ValueError:
                 pass
             try:
-                player.balls = int(player_row[7])
+                player.wickets = int(player_row[9])
             except ValueError:
                 pass
             try:
-                player.bid_order = int(player_row[8])
+                player.balls = int(player_row[10])
             except ValueError:
                 pass
             player.update_batch()
         Player.commit_batch()
+        Game.init_game()
         return self.SUCCESS
 
     def upload_scores(self):

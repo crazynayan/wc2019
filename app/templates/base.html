@@ -39,15 +39,21 @@ World Cup Super League
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                 </li>
+                {% if g.game.player_to_bid %}
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.available_players') }}">Available</a>
                 </li>
+                {% endif %}
+                {% if g.game.bid_in_progress %}
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.bid_player') }}">Bid</a>
                 </li>
+                {% endif %}
+                {% if g.game.player_to_bid != g.game.player_count %}
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.show_bids') }}">Bids</a>
                 </li>
+                {% endif %}
             </ul>
             <ul class="navbar-nav ml-auto">
                 {% if current_user.is_anonymous %}
@@ -82,18 +88,29 @@ World Cup Super League
     {% if g.game.bid_in_progress %}
     {% if g.game.last_player %}
     <div class="alert alert-success" role="alert">
-        <strong><span id="last_player">{{ g.game.last_player }}</span></strong>
-        was purchased by
+        <a href="{{ url_for('main.show_bids') }}" style="color:inherit;">
+            <strong><span id="last_player">{{ g.game.last_player }}</span></strong>
+        </a>
+        was taken by
         <strong><span id="last_winner">{{ g.game.last_winner }}</span></strong>
         @ &#8377
         <strong><span id="last_price">{{ g.game.last_price }}</span></strong> lacs.
     </div>
     {% endif %}
     <div class="alert alert-warning" role="alert">
-        <strong><span id="current_player">{{ g.game.player_in_bidding }}</span></strong>
-        is still awaiting bid from
-        <strong><span id="user_to_bid">{{ g.game.user_to_bid }}</span></strong>
-        users.
+        <a href="{{ url_for('main.bid_player') }}" style="color:inherit;">
+            <strong><span id="current_player" >{{ g.game.player_in_bidding }}</span></strong>
+        </a>
+        is awaiting bid from
+        <strong><span id="user_to_bid">
+            {% if g.game.user_to_bid <= 5 %}
+            {% for username in g.game.users_to_bid %}
+            {{ username.upper() }}
+            {% endfor %}
+            {% else %}
+            {{ g.game.user_to_bid }} users.
+            {% endif %}
+        </span></strong>
     </div>
     {% endif %}
     {% endif %}
@@ -109,14 +126,31 @@ World Cup Super League
     {% if current_user.is_authenticated %}
     {% if g.game.bid_in_progress %}
     $(function() {
+        var bid_in_progress = true;
         setInterval(function() {
-            $.ajax('{{ url_for('main.game_status') }}').done(function(game) {
-                $('#last_player').text(game.last_player);
-                $('#last_winner').text(game.last_winner);
-                $('#last_price').text(game.last_price);
-                $('#current_player').text(game.player_in_bidding);
-                $('#user_to_bid').text(game.user_to_bid);
-            });
+            if (bid_in_progress) {
+                $.ajax('{{ url_for('main.game_status') }}').done(function(game) {
+                    bid_in_progress = game.bid_in_progress;
+                    $('#last_player').text(game.last_player);
+                    $('#last_winner').text(game.last_winner);
+                    $('#last_price').text(game.last_price);
+                    $('#current_player').text(game.player_in_bidding);
+                    if (game.user_to_bid <= 5) {
+                        var users = "";
+                        for (var i = 0; i < game.users_to_bid.length; i++) {
+                            users = users.concat(game.users_to_bid[i].toUpperCase());
+                            if (i + 1 != game.users_to_bid.length)
+                                users = users.concat(" ");
+                        }
+                        $('#user_to_bid').text(users);
+                    }
+                    else {
+                        var users = JSON.stringify(game.user_to_bid);
+                        users = users.concat(" users.")
+                        $('#user_to_bid').text(users);
+                    }
+                });
+            }
         }, 10000);
     });
     {% endif %}

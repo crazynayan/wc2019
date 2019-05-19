@@ -1,3 +1,4 @@
+from os import path
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from firestore_model import FirestoreModel
@@ -7,13 +8,13 @@ from app import login
 class User(UserMixin, FirestoreModel):
     INITIAL_BUDGET = 10000
     COLLECTION = 'users'
-    DEFAULT = 'name'
+    DEFAULT = 'username'
 
-    def __init__(self, name=None, username=None):
+    def __init__(self, username=None, name=None):
         super().__init__()
-        self.name = name if name else 'No Name'
-        self.doc_id = username
         self.username = username if username else '**'
+        self.doc_id = username
+        self.name = name if name else 'No Name'
         self.balance = self.INITIAL_BUDGET
         self.points = 0.0
         self.color = 'black'
@@ -59,6 +60,8 @@ class Player(FirestoreModel):
         self.country = None
         self.score = 0
         self.bid_order = 0
+        self.bg_color = 'white'
+        self.color = 'black'
         self.type = None
         self.tags = list()
         self.matches = 0
@@ -103,6 +106,20 @@ class Player(FirestoreModel):
             return 0
         return round(self.wickets / self.matches, 2)
 
+    @property
+    def image_file(self):
+        if not self.doc_id:
+            return None
+        filenames = [
+            self.doc_id + '.jpg',
+            self.doc_id + '.png',
+            self.doc_id + '.gif',
+        ]
+        for filename in filenames:
+            if path.exists('app/static/' + filename):
+                return filename
+        return None
+
 
 class Game(FirestoreModel):
     COLLECTION = 'games'
@@ -120,6 +137,7 @@ class Game(FirestoreModel):
 
         self.player_in_bidding = None
         self.user_to_bid = 0  # Initialize to user_count when a player enters bidding, Decremented for every bid
+        self.users_to_bid = list()
         self.last_player = None
         self.last_winner = None
         self.last_price = 0
@@ -139,8 +157,9 @@ class Game(FirestoreModel):
 
     # Should only be called after creating all users in db
     def set_user_count(self):
-        self.user_count = len(User.get_all())
-        self.total_balance = self.user_count * User.INITIAL_BUDGET
+        users = User.get_all()
+        self.user_count = len(users)
+        self.total_balance = self.user_count * sum([user.balance for user in users])
         self.update()
 
     # Should only be called after creating all players in db
@@ -185,7 +204,6 @@ class Bid(FirestoreModel):
         self.player_name = player_name if player_name else 'No Name'
         self.doc_id = self.player_name.replace(' ', '_').lower()
         self.bid_map = list()
-        self.usernames = list()
         self.winner = None
         self.winning_price = 0
         self.bid_order = None
@@ -197,13 +215,14 @@ class Bid(FirestoreModel):
         return self.update()
 
     def has_bid(self, username):
-        if not self.usernames:
+        if not self.bid_map:
             return False
-        return username in self.usernames
+        usernames = [bd['username'] for bd in self.bid_map]
+        return username in usernames
 
     def is_bid_complete(self, user_count):
-        if not self.usernames:
+        if not self.bid_map:
             return False
-        return len(self.usernames) >= user_count
+        return len(self.bid_map) >= user_count
 
 

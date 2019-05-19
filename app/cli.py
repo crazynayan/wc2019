@@ -34,11 +34,61 @@ def register(app):
             Game.init_game()
 
     @wc.command()
-    def bid():
-        """ Invite players for bid. """
+    @click.argument('command')
+    def bid(command):
+        """
+        Control bid status.\n
+        start - Start players for bid.\n
+        pause - Pause bidding.\n
+        resume - Resume bidding.\n
+        """
         game = Game.read()
         if game is None:
             game = Game.init_game()
-        if game.bid_in_progress:
-            raise RuntimeError('Bid is already in progress.')
-        invite_bid()
+
+        command = command.lower().strip()
+
+        if command not in ['start', 'pause', 'resume']:
+            click.echo('Valid options are start, pause or resume.')
+            return
+
+        if game.user_count == 0 or game.player_count == 0:
+            click.echo('Init the game first by uploading player data.')
+            return
+
+        if game.player_to_bid == 0:
+            click.echo('Bidding is complete')
+            return
+
+        if command == 'start':
+            if game.bid_in_progress:
+                click.echo('Bid is already in progress.')
+                return
+            if game.player_to_bid != game.player_count:
+                click.echo('Bidding has already started. Use resume option.')
+                return
+            invite_bid()
+            click.echo('Bidding has been started.')
+            return
+
+        if command == 'pause':
+            if not game.bid_in_progress:
+                click.echo('Bid is NOT in progress.')
+                return
+            game.bid_in_progress = False
+            game.update()
+            click.echo('Bidding has been paused.')
+            return
+
+        if command == 'resume':
+            if game.bid_in_progress:
+                click.echo('Bid is already in progress.')
+                return
+            if game.player_to_bid == game.player_count:
+                click.echo('Bidding has not yet started. Use start option.')
+                return
+            game.bid_in_progress = True
+            game.update()
+            click.echo('Bidding has been resumed.')
+
+

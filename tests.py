@@ -29,7 +29,7 @@ class UserTest(unittest.TestCase):
 
     def test_user_create(self):
         # Setup a user and test_user dictionary
-        user = User('Vinayak', 'vp')
+        user = User(name='Vinayak', username='vp')
         test_user_dict = {
             'username': 'vp',
             'name': 'Vinayak',
@@ -51,8 +51,8 @@ class UserTest(unittest.TestCase):
 
     def test_user_update(self):
         # Setup a user and test_user
-        user = User('Purvi', 'pz')
-        test_user = User('Purvi', 'pz')
+        user = User(name='Purvi', username='pz')
+        test_user = User(name='Purvi', username='pz')
 
         # Add it to the database with the username as the doc id
         user.update(user.username)
@@ -83,7 +83,7 @@ class UserTest(unittest.TestCase):
             'Sandeep': 'sb',
         }
         for name in names:
-            user = User(name, names[name])
+            user = User(name=name, username=names[name])
             users[name] = user
             test_users[name] = user
 
@@ -108,7 +108,7 @@ class UserTest(unittest.TestCase):
             'Sandeep': {'username': 'sb', 'player_count': 1, 'balance': 1000, 'found': False},
         }
         for name in names:
-            user = User(name, names[name]['username'])
+            user = User(name=name, username=names[name]['username'])
             user.player_count = names[name]['player_count']
             user.balance = names[name]['balance']
             users[name] = user
@@ -132,7 +132,7 @@ class UserTest(unittest.TestCase):
 
         # Test query_first
         name = 'Manisha'
-        manisha = User(name, names[name]['username'])
+        manisha = User(name=name, username=names[name]['username'])
         manisha.player_count = names[name]['player_count']
         manisha.balance = names[name]['balance']
         db_user = User.query_first(player_count=3, balance=5000)
@@ -183,8 +183,8 @@ class GameTest(unittest.TestCase):
 
     def test_game_setup(self):
         # Setup user, player, game
-        sneha = User('Sneha Yadgire', 'sy')
-        manisha = User('Manisha Auti', 'ma')
+        sneha = User(name='Sneha Yadgire', username='sy')
+        manisha = User(name='Manisha Auti', username='ma')
 
         rohit = Player('Rohit Sharma')
 
@@ -202,8 +202,8 @@ class GameTest(unittest.TestCase):
 
     def test_player_purchase(self):
         # Setup user, player, game
-        sneha = User('Sneha Yadgire', 'sy')
-        manisha = User('Manisha Auti', 'ma')
+        sneha = User(name='Sneha Yadgire', username='sy')
+        manisha = User(name='Manisha Auti', username='ma')
 
         rohit = Player('Rohit Sharma')
         winner = {
@@ -271,7 +271,7 @@ class GameTest(unittest.TestCase):
         users = list()
         players = list()
         for username, owner in user_map.items():
-            db_user = User(owner['name'], username)
+            db_user = User(name=owner['name'], username=username)
             db_user.points = owner['points']
             users.append(db_user)
         for _, player in enumerate(player_list):
@@ -456,7 +456,7 @@ class BidTest(unittest.TestCase):
         bid.refresh()
         game.refresh()
         self.assertEqual(Bid.SUCCESS, bid_result)
-        self.assertIn('nz', bid.usernames)
+        self.assertNotIn('nz', game.users_to_bid)
         self.assertTrue(bid.has_bid('nz'))
         self.assertEqual(3, game.user_to_bid)
         self.assertIn({'username': 'nz', 'amount': 1500}, bid.bid_map)
@@ -470,7 +470,7 @@ class BidTest(unittest.TestCase):
         bid.refresh()
         game.refresh()
         self.assertEqual(Bid.SUCCESS, bid_result)
-        self.assertNotIn('sa', bid.usernames)
+        self.assertIn('sa', game.users_to_bid)
         self.assertEqual(1, game.user_to_bid)
         self.assertFalse(bid.is_bid_complete(game.user_count))
         self.assertEqual(Bid.SUCCESS, bid_result)
@@ -536,7 +536,7 @@ class BidTest(unittest.TestCase):
         # Check accept bid errors
         self.assertEqual(Bid.ERROR_INVALID_AMOUNT, accept_bid(bid, None, 0))
         self.assertEqual(Bid.ERROR_SYSTEM, accept_bid(bid, None))
-        test_user = User('Nayan', 'nz')
+        test_user = User(name='Nayan', username='nz')
         test_user.username = None
         self.assertEqual(Bid.ERROR_SYSTEM, accept_bid(bid, test_user))
         test_user.username = 'nz'
@@ -557,36 +557,52 @@ class BidTest(unittest.TestCase):
         self.assertEqual(Bid.SUCCESS, bid_result)
         bid_result = accept_bid(bid, User.query_first(username='rg'), 2100)
         self.assertEqual(Bid.SUCCESS, bid_result)
-        bid_result = accept_bid(bid, User.query_first(username='sa'), 2500)
+        bid_result = accept_bid(bid, User.query_first(username='sa'), 10000)
         self.assertIsInstance(bid_result, Bid)
         self.assertEqual('sa', Player.query_first(name=bid.player_name).owner_username)
 
-        # Bid for remaining 2 players
+        # Bid for next player and check the auto zero bid for 'sa'
         bid = bid_result
         bid_result = accept_bid(bid, User.query_first(username='nz'), 2000)
         self.assertEqual(Bid.SUCCESS, bid_result)
         bid_result = accept_bid(bid, User.query_first(username='pp'), 2600)
         self.assertEqual(Bid.SUCCESS, bid_result)
         bid_result = accept_bid(bid, User.query_first(username='rg'), 2700)
-        self.assertEqual(Bid.SUCCESS, bid_result)
-        bid_result = accept_bid(bid, User.query_first(username='sa'), 2300)
         self.assertIsInstance(bid_result, Bid)
         self.assertEqual('rg', Player.query_first(name=bid.player_name).owner_username)
         self.assertEqual(2, User.query_first(username='rg').player_count)
+        self.assertTrue(bid.has_bid('sa'))
+        self.assertEqual(Bid.NO_BALANCE, [bd['amount'] for bd in bid.bid_map if bd['username'] == 'sa'][0])
+
+        # Bid for next player and check for a tie
         bid = bid_result
-        bid_result = accept_bid(bid, User.query_first(username='nz'), 3000)
+        bid_result = accept_bid(bid, User.query_first(username='nz'), 5000)
         self.assertEqual(Bid.SUCCESS, bid_result)
-        bid_result = accept_bid(bid, User.query_first(username='pp'), 6000)
+        bid_result = accept_bid(bid, User.query_first(username='pp'), 5000)
         self.assertEqual(Bid.SUCCESS, bid_result)
-        bid_result = accept_bid(bid, User.query_first(username='rg'), 3500)
-        self.assertEqual(Bid.SUCCESS, bid_result)
-        bid_result = accept_bid(bid, User.query_first(username='sa'), 4000)
+        bid_result = accept_bid(bid, User.query_first(username='rg'), 5000)
         self.assertEqual(Bid.ERROR_NO_MORE_PLAYERS, bid_result)
+        self.assertIn(Player.query_first(name=bid.player_name).owner_username, ['nz', 'pp', 'rg'])
         game.refresh()
         self.assertEqual(0, game.player_to_bid)
         self.assertIsNone(game.player_in_bidding)
         self.assertFalse(game.bid_in_progress)
         self.assertEqual(0, game.user_to_bid)
+
+        # Check bids view
+        bids = bids_view()
+        self.assertEqual(5, len(bids))
+        self.assertEqual('Jaspreet Bumrah', bids[0].player_name)
+        test_usernames = ['nz', 'pp', 'rg', 'sa']
+        db_usernames = [bd['username'] for bd in bids[0].bid_map]
+        self.assertListEqual(test_usernames, db_usernames)
+
+        # Check paginated bids view
+        page = bids_view(3)
+        page = bids_view(page.per_page, end=page.current_end.doc_id)
+        self.assertEqual('Rohit Sharma', page.items[0].player_name)
+        db_usernames = [bd['username'] for bd in page.items[0].bid_map]
+        self.assertListEqual(test_usernames, db_usernames)
 
 
 class UploadTest(unittest.TestCase):

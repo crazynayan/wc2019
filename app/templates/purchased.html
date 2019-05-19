@@ -17,10 +17,17 @@
     {% for player in players %}
     <tr>
         <td>{{ loop.index }}</td>
-        <td>{{ player.name }}</td>
+        <td>
+            <a href="{{ url_for('main.player_profile', player_id=player.doc_id) }}"
+               style="text-decoration:none !important; color:inherit">
+                <div>{{ player.name }}</div>
+            </a>
+        </td>
         <td>{{ player.score }}</td>
         <td>{{ player.price }}</td>
-        <td>{{ player.country }}</td>
+        <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;">
+            {{ player.country }}
+        </td>
     </tr>
     {% endfor %}
     </tbody>

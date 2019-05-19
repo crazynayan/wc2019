@@ -1,0 +1,52 @@
+<table class="table">
+    <tr>
+        <td width="128px">
+            {% if player.image_file %}
+            <img src="{{ url_for('static', filename=player.image_file) }}">
+            {% endif %}
+        </td>
+        <td width="256px" style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;">
+            <p>{{ player.name }}</p>
+            <p>
+                {{ player.country }}, {{ player.type }}
+            </p>
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td width="384px" colspan="2">
+            <table class="table table-bordered table-sm">
+                <tr>
+                    <td colspan="6" align="center">Overall</td>
+                </tr>
+                <tr>
+                    <td>Matches</td>
+                    <td>{{ player.matches }}</td>
+                    <td>Runs</td>
+                    <td>{{ player.runs }}</td>
+                    <td>Wickets</td>
+                    <td>{{ player.wickets }}</td>
+                </tr>
+                <tr>
+                    <td colspan="6" align="center">Per Match</td>
+                </tr>
+                <tr>
+                    <td>Overs</td>
+                    <td>{{ player.overs_per_match }}</td>
+                    <td>Runs</td>
+                    <td>{{ player.runs_per_match }}</td>
+                    <td>Wickets</td>
+                    <td>{{ player.wickets_per_match }}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td>Tags</td>
+        <td>
+            {% for tag in player.tags %}
+            <span class="badge badge-info">{{ tag }}</span>
+            {% endfor %}
+        </td>
+    </tr>
+</table>

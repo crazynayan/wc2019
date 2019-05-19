@@ -6,8 +6,7 @@ from app.models import User
 
 
 class BidForm(FlaskForm):
-    amount = IntegerField('Bid :  ', validators=[InputRequired('Bid is required.'),
-                                             NumberRange(min=0, max=User.INITIAL_BUDGET)])
+    amount = IntegerField('', validators=[InputRequired('Bid is required.'), NumberRange(min=0, max=User.INITIAL_BUDGET)])
     submit = SubmitField('Submit')
 
     def __init__(self, balance, *args, **kwargs):
