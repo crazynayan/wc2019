@@ -11,6 +11,7 @@
     <th scope="col">Bid No.</th>
     <th scope="col">Name</th>
     <th scope="col">Type</th>
+    <th scope="col" style="text-align:center">Value</th>
     <th scope="col">Country</th>
     <th scope="col">Tags</th>
     </thead>
@@ -25,6 +26,9 @@
             </a>
         </td>
         <td>{{ player.type }}</td>
+        <td style="text-align:center">
+            {{ player.value }}
+        </td>
         <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;">
             {{ player.country }}
         </td>

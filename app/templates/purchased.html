@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 
 {% block app_content %}
-<h1>
-    World Cup Super League - Players
-</h1>
+<h4>
+    {% if players %}
+    {{ players[0].owner.name }} - Players
+    {% else %}
+    WCSL - Players
+    {% endif %}
+</h4>
 {% if players %}
 <table class="table table-bordered table-sm table-hover">
     <thead class="thead-dark">
@@ -23,8 +27,12 @@
                 <div>{{ player.name }}</div>
             </a>
         </td>
-        <td>{{ player.score }}</td>
-        <td>{{ player.price }}</td>
+        <td style="text-align:center">
+            {{ player.score }}
+        </td>
+        <td style="text-align:center">
+            {{ player.price }}
+        </td>
         <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;">
             {{ player.country }}
         </td>

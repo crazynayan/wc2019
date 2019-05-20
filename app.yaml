@@ -1,6 +1,6 @@
 runtime: python37
 
-entrypoint: gunicorn -b :8000 wc:app
+entrypoint: gunicorn -b :$PORT wc:app
 
 handlers:
   - url: /static

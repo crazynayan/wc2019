@@ -1,7 +1,7 @@
 import unittest
 from app.main.game_transactions import *
 from app import create_app
-from app.models import User, Player, Game, Bid
+from app.models import User, Player, Game, Bid, Country
 from config import Config
 
 
@@ -243,7 +243,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.player_in_bidding)
         self.assertEqual(0, game.user_to_bid)
         self.assertEqual(rohit.name, game.last_player)
-        self.assertEqual(sneha.name, game.last_winner)
+        self.assertEqual(sneha.username.upper(), game.last_winner)
         self.assertEqual(2000, game.last_price)
         self.assertEqual(8000, sneha.balance)
         self.assertEqual(1, sneha.player_count)
@@ -266,7 +266,7 @@ class GameTest(unittest.TestCase):
             {'name': 'Shikhar Dhawan', 'score': 100.0},
             {'name': 'Virat Kohli', 'score': 245.5, 'owner': user_map['pp'], 'owner_username': 'pp'},
             {'name': 'Hardik Pandya', 'score': 251, 'owner': user_map['rg'], 'owner_username': 'rg'},
-            {'name': 'Jaspreet Bumrah', 'score': 151, 'owner': user_map['nu'], 'owner_username': 'nu'},
+            {'name': 'Jasprit Bumrah', 'score': 151, 'owner': user_map['nu'], 'owner_username': 'nu'},
         ]
         users = list()
         players = list()
@@ -314,7 +314,7 @@ class GameTest(unittest.TestCase):
             {'player': 'Shikhar Dhawan', 'score': 15},
             {'player': 'Virat Kohli', 'score': 20.5},
             {'player': 'Hardik Pandya', 'score': 25},
-            {'player': 'Jaspreet Bumrah', 'score': 30},
+            {'player': 'Jasprit Bumrah', 'score': 30},
         ]
         user_points = {
             'nu': 40.0,
@@ -345,7 +345,7 @@ class GameTest(unittest.TestCase):
             {'name': 'Shikhar Dhawan', 'score': 100.0},
             {'name': 'Virat Kohli', 'score': 245.5},
             {'name': 'Hardik Pandya', 'score': 251},
-            {'name': 'Jaspreet Bumrah', 'score': 151},
+            {'name': 'Jasprit Bumrah', 'score': 151},
         ]
         user_list = [
             {'username': 'nz', 'name': 'Nayan'},
@@ -387,7 +387,7 @@ class GameTest(unittest.TestCase):
         players = Player.get_all()
         game = Game.init_game()
         for player in players:
-            if player.name == 'Jaspreet Bumrah':
+            if player.name == 'Jasprit Bumrah':
                 purchase_player(player, nayan, 300)
             else:
                 purchase_player(player, pranay, 350)
@@ -426,7 +426,7 @@ class BidTest(unittest.TestCase):
             {'name': 'Shikhar Dhawan', 'bid_order': 4},
             {'name': 'Virat Kohli', 'bid_order': 1},
             {'name': 'Hardik Pandya', 'bid_order': 3},
-            {'name': 'Jaspreet Bumrah', 'bid_order': 5},
+            {'name': 'Jasprit Bumrah', 'bid_order': 5},
         ]
         user_list = [
             {'username': 'nz', 'name': 'Nayan'},
@@ -480,7 +480,7 @@ class BidTest(unittest.TestCase):
         bid_result = accept_bid(bid, User.query_first(username='sa'), 1350)
         bid.refresh()
         game.refresh()
-        self.assertEqual('Raj', game.last_winner)
+        self.assertEqual('RG', game.last_winner)
         self.assertEqual('Virat Kohli', game.last_player)
         self.assertEqual(1550, game.last_price)
         self.assertEqual(Player.PURCHASED, Player.query_first(name='Virat Kohli').status)
@@ -592,7 +592,7 @@ class BidTest(unittest.TestCase):
         # Check bids view
         bids = bids_view()
         self.assertEqual(5, len(bids))
-        self.assertEqual('Jaspreet Bumrah', bids[0].player_name)
+        self.assertEqual('Jasprit Bumrah', bids[0].player_name)
         test_usernames = ['nz', 'pp', 'rg', 'sa']
         db_usernames = [bd['username'] for bd in bids[0].bid_map]
         self.assertListEqual(test_usernames, db_usernames)
@@ -694,10 +694,29 @@ class UploadTest(unittest.TestCase):
         page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
         self.assertIsNone(page)
 
-    def test_player_image(self):
-        players = Player.get_all()
-        for player in players:
-            if player.country == 'Sri Lanka':
+        # Test image
+        countries = ['Australia', 'India', 'Sri Lanka', 'England', 'New Zealand', 'South Africa', 'Pakistan']
+        for country in countries:
+            players = Player.query(country=country)
+            if country == 'England':
+                self.assertEqual(14, len(players))
+            else:
+                self.assertEqual(15, len(players))
+            for player in players:
                 self.assertIsNotNone(player.image_file, f'{player.name}')
 
+    # def test_player_image(self):
+    #     players = Player.query(country='New Zealand')
+    #     self.assertEqual(15, len(players))
+    #     for player in players:
+    #         self.assertIsNotNone(player.image_file, f'{player.name}')
+    #
+    def test_country(self):
+        aus = Country('Aus')
+        self.assertEqual('Australia', aus.name)
+        ind = Country('INDIA')
+        self.assertEqual(2, ind.rank)
+        sa = Country('south africa')
+        self.assertEqual('forestgreen', sa.bg_color)
+        self.assertEqual('yellow', sa.color)
 

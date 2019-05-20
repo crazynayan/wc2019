@@ -3,7 +3,7 @@ import random
 from firebase_admin import firestore
 from flask import current_app
 from firestore_model import FirestorePage
-from app.models import Game, User, Player, Bid
+from app.models import Game, User, Player, Bid, Country
 
 
 @firestore.transactional
@@ -43,10 +43,12 @@ def purchase_player_transaction(transaction, player, user=None, amount=0):
         }
         last_winner = 'Unsold'
         amount = 0
+    player_value = Player.query_first(name=player_snapshot.get('name')).value
     game_updates = {
         'total_balance': game_snapshot.get('total_balance') - amount,
         'player_in_bidding': None,
         'player_to_bid': game_snapshot.get('player_to_bid') - 1,
+        'remaining_value': game_snapshot.get('remaining_value') - player_value,
         'user_to_bid': 0,
         'last_player': player_snapshot.get('name'),
         'last_winner': last_winner,
@@ -360,54 +362,50 @@ class Upload:
         return self.SUCCESS
 
     def upload_players(self):
-        # Index   0        1         2       3       4         5          6         7           8        9         10       11        12
-        hdr = ['name', 'country', 'type', 'tags', 'color', 'bg_color', 'rank', 'bid_order', 'matches', 'runs', 'wickets', 'balls', 'catches']
+        # Index   0        1         2       3         4           5        6         7         8        9
+        hdr = ['name', 'country', 'type', 'tags', 'bid_order', 'matches', 'runs', 'catches', 'balls', 'wickets']
         if self.data_list[0] != hdr:
             return self.ERROR_INVALID_HEADER
         Player.delete_all()
         Bid.delete_all()
         Player.init_batch()
         for player_row in self.data_list[1:]:
-            player = Player(player_row[0].strip())
-            player.country = player_row[1].strip()
-            player.type = player_row[2].strip()
-            tags = [tag.strip().lower() for tag in player_row[3].split(';') if len(tag) > 0]
+            player_row.reverse()
+            player = Player(player_row.pop().strip())
+            player.country = player_row.pop().strip()
+            country = Country(player.country)
+            player.rank = country.rank
+            player.color = country.color
+            player.bg_color = country.bg_color
+            player.country_code = country.code
+            player.type = player_row.pop().strip()
+            tags = [tag.strip().lower() for tag in player_row.pop().split(';') if len(tag) > 0]
             tags.append(player.country.lower())
-            if player.type.lower() not in player_row[3].lower():
+            if player.type.lower() not in tags:
                 tags.append(player.type.lower())
             player.tags = tags
-            player.color = player_row[4]
-            player.bg_color = player_row[5]
             try:
-                player.rank = int(player_row[6])
+                player.bid_order = int(player_row.pop())
             except ValueError:
                 pass
             try:
-                player.bid_order = int(player_row[7])
+                player.matches = int(player_row.pop())
             except ValueError:
                 pass
             try:
-                player.bid_order = int(player_row[7])
+                player.runs = int(player_row.pop())
             except ValueError:
                 pass
             try:
-                player.matches = int(player_row[8])
+                player.catches = int(player_row.pop())
             except ValueError:
                 pass
             try:
-                player.runs = int(player_row[9])
+                player.balls = int(player_row.pop())
             except ValueError:
                 pass
             try:
-                player.wickets = int(player_row[10])
-            except ValueError:
-                pass
-            try:
-                player.balls = int(player_row[11])
-            except ValueError:
-                pass
-            try:
-                player.catches = int(player_row[12])
+                player.wickets = int(player_row.pop())
             except ValueError:
                 pass
             player.update_batch()

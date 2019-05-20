@@ -10,6 +10,9 @@
             <p>
                 {{ player.country }}, {{ player.type }}
             </p>
+            <p>
+                Expected to earn {{ player.value }} points on an average.
+            </p>
         </td>
         <td></td>
     </tr>
@@ -17,7 +20,7 @@
         <td width="384px" colspan="2">
             <table class="table table-bordered table-sm">
                 <tr>
-                    <td colspan="6" align="center">Overall</td>
+                    <td colspan="8" align="center">Overall</td>
                 </tr>
                 <tr>
                     <td>Matches</td>
@@ -26,9 +29,11 @@
                     <td>{{ player.runs }}</td>
                     <td>Wickets</td>
                     <td>{{ player.wickets }}</td>
+                    <td>Catches</td>
+                    <td>{{ player.catches }}</td>
                 </tr>
                 <tr>
-                    <td colspan="6" align="center">Per Match</td>
+                    <td colspan="8" align="center">Per Match</td>
                 </tr>
                 <tr>
                     <td>Overs</td>
@@ -37,6 +42,8 @@
                     <td>{{ player.runs_per_match }}</td>
                     <td>Wickets</td>
                     <td>{{ player.wickets_per_match }}</td>
+                    <td>Catches</td>
+                    <td>{{ player.catches_per_match }}</td>
                 </tr>
             </table>
         </td>

@@ -10,7 +10,7 @@ World Cup Super League
 
 {% block navbar %}
 <div class="container">
-    <nav class="navbar navbar-dark bg-dark navbar-expand-sm">
+    <nav class="navbar navbar-light bg-light navbar-expand-sm">
         <a class="navbar-brand" href="{{ url_for('main.index') }}">
             {% if current_user.is_authenticated %}
             <div style="background-color:{{ current_user.bg_color }};
@@ -39,6 +39,7 @@ World Cup Super League
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                 </li>
+                {% if current_user.is_authenticated %}
                 {% if g.game.player_to_bid %}
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.available_players') }}">Available</a>
@@ -53,6 +54,7 @@ World Cup Super League
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('main.show_bids') }}">Bids</a>
                 </li>
+                {% endif %}
                 {% endif %}
             </ul>
             <ul class="navbar-nav ml-auto">
