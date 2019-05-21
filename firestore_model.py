@@ -140,12 +140,28 @@ class FirestoreModel:
         return models
 
     @classmethod
-    def order_by(cls, *criteria, query={}, page=None):
+    def query_array(cls, array):
         doc_ref = cls.db.collection(cls.COLLECTION)
-        if query:
+        if array and isinstance(array, tuple) and len(array) == 2:
+            doc_ref = doc_ref.where(array[0], 'array_contains', array[1])
+        docs = doc_ref.stream()
+        models = list()
+        for doc in docs:
+            model = cls.from_dict(doc.to_dict())
+            model.doc_id = doc.id
+            models.append(model)
+        return models
+
+
+    @classmethod
+    def order_by(cls, *criteria, query={}, array=(), page=None):
+        doc_ref = cls.db.collection(cls.COLLECTION)
+        if query and isinstance(query, dict):
             for field in query:
                 if field in cls().__dict__ and field != 'doc_id':
                     doc_ref = doc_ref.where(field, '==', query[field])
+        if array and isinstance(array, tuple) and len(array) == 2:
+            doc_ref = doc_ref.where(array[0], 'array_contains', array[1])
         saved_ref = doc_ref
         field = None
         order = None

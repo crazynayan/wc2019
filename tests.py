@@ -209,6 +209,8 @@ class GameTest(unittest.TestCase):
         winner = {
             'name': sneha.name,
             'points': sneha.points,
+            'color': 'black',
+            'bg_color': 'white',
         }
         winner_username = sneha.username
         players = ['p2', 'p3', 'p4', 'p5']
@@ -354,22 +356,26 @@ class GameTest(unittest.TestCase):
         test_player_list = [
             {
                 'name': 'Hardik Pandya', 'score': 251,
-                'owner_username': 'pp', 'owner': {'name': 'Pranay', 'points': 657.0},
+                'owner_username': 'pp',
+                'owner': {'name': 'Pranay', 'points': 657.0, 'color': 'black', 'bg_color': 'white'},
                 'status': Player.PURCHASED, 'price': 350,
             },
             {
                 'name': 'Virat Kohli', 'score': 245.5,
-                'owner_username': 'pp', 'owner': {'name': 'Pranay', 'points': 657.0},
+                'owner_username': 'pp',
+                'owner': {'name': 'Pranay', 'points': 657.0, 'color': 'black', 'bg_color': 'white'},
                 'status': Player.PURCHASED, 'price': 350,
             },
             {
                 'name': 'Shikhar Dhawan', 'score': 100.0,
-                'owner_username': 'pp', 'owner': {'name': 'Pranay', 'points': 657.0},
+                'owner_username': 'pp',
+                'owner': {'name': 'Pranay', 'points': 657.0, 'color': 'black', 'bg_color': 'white'},
                 'status': Player.PURCHASED, 'price': 350,
             },
             {
                 'name': 'Rohit Sharma', 'score': 60.5,
-                'owner_username': 'pp', 'owner': {'name': 'Pranay', 'points': 657.0},
+                'owner_username': 'pp',
+                'owner': {'name': 'Pranay', 'points': 657.0, 'color': 'black', 'bg_color': 'white'},
                 'status': Player.PURCHASED, 'price': 350,
             },
         ]
@@ -653,7 +659,7 @@ class UploadTest(unittest.TestCase):
         angelo = Player.query_first(name='Angelo Mathews')
         self.assertEqual(4.1, angelo.overs_per_match)
         self.assertEqual(26.5, angelo.runs_per_match)
-        self.assertEqual(0.56, angelo.wickets_per_match)
+        self.assertEqual(0.6, angelo.wickets_per_match)
         # Test pagination
         page = available_players_view(25)
         self.assertEqual(1, page.current_start.bid_order)
@@ -695,7 +701,7 @@ class UploadTest(unittest.TestCase):
         self.assertIsNone(page)
 
         # Test image
-        countries = ['Australia', 'India', 'Sri Lanka', 'England', 'New Zealand', 'South Africa', 'Pakistan']
+        countries = ['Australia', 'India', 'Sri Lanka', 'England', 'New Zealand', 'South Africa', 'Pakistan', 'West Indies', 'Bangladesh']
         for country in countries:
             players = Player.query(country=country)
             if country == 'England':
@@ -704,13 +710,13 @@ class UploadTest(unittest.TestCase):
                 self.assertEqual(15, len(players))
             for player in players:
                 self.assertIsNotNone(player.image_file, f'{player.name}')
+            tags = (country.lower(), '-backup')
+            players = search_players_view(tags)
+            self.assertEqual(11, len(players), f'{tags}')
+            tags = ('captain', country.lower())
+            players = search_players_view(tags)
+            self.assertEqual(1, len(players), f'{tags}')
 
-    # def test_player_image(self):
-    #     players = Player.query(country='New Zealand')
-    #     self.assertEqual(15, len(players))
-    #     for player in players:
-    #         self.assertIsNotNone(player.image_file, f'{player.name}')
-    #
     def test_country(self):
         aus = Country('Aus')
         self.assertEqual('Australia', aus.name)

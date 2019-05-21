@@ -1,7 +1,7 @@
 from flask import render_template, request, url_for, flash, redirect, jsonify, g
 from flask_login import login_required, current_user
 from app.main import bp
-from app.main.forms import BidForm
+from app.main.forms import BidForm, SearchForm
 from app.main.game_transactions import *
 from config import Config
 
@@ -12,6 +12,8 @@ def before_request():
     if game is None:
         game = Game.init_game()
     g.game = game
+    if current_user.is_authenticated:
+        g.search_form = SearchForm()
 
 
 @bp.route('/')
@@ -34,7 +36,7 @@ def purchased_players(username):
     return render_template(template, title=title, players=players)
 
 
-@bp.route('/players')
+@bp.route('/available')
 @login_required
 def available_players():
     template = 'available.html'
@@ -114,3 +116,23 @@ def show_bids():
 def game_status():
     game_dict = g.game.to_dict()
     return jsonify(game_dict)
+
+
+@bp.route('/players')
+@login_required
+def player_search():
+    template = 'search.html'
+    title = 'Players'
+    if not g.search_form.validate():
+        return redirect(url_for('main.home'))
+    tags = g.search_form.q.data.split(';')
+    players = search_players_view(tags)
+    summary = dict()
+    if players:
+        summary['score'] = sum([player.score for player in players])
+        summary['value'] = sum([player.value for player in players])
+        summary['matches'] = sum([player.matches for player in players])
+        summary['overs'] = round(sum([player.overs_per_match for player in players]))
+        summary['runs'] = round(sum([player.runs_per_match for player in players]))
+        summary['wickets'] = round(sum([player.wickets_per_match for player in players]))
+    return render_template(template, title=title, players=players, tags=tags, summary=summary)

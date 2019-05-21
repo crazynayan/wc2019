@@ -29,6 +29,8 @@ def purchase_player_transaction(transaction, player, user=None, amount=0):
             'owner': {
                 'name': user_snapshot.get('name'),
                 'points': user_snapshot.get('points') + player_snapshot.get('score'),
+                'color': user_snapshot.get('color'),
+                'bg_color': user_snapshot.get('bg_color'),
             },
             'price': amount,
         }
@@ -284,6 +286,53 @@ def available_players_view(per_page=None, start='', end='', direction=FirestoreP
     return page
 
 
+def search_players_view(tags):
+    if isinstance(tags, str):
+        tags = [tags.strip()]
+    if not isinstance(tags, list) and not isinstance(tags, tuple):
+        return None
+    if len(tags) < 1 or len(tags) > 10:
+        return None
+    players = list()
+    for tag in tags:
+        tag = tag.strip()
+        if not tag:
+            continue
+        not_query = False
+        if tag[0] == '-':
+            not_query = True
+            tag = tag[1:]
+            # if tag not in Player.TAGS_NOT:
+            #     continue
+        players_with_tags = Player.query_array(('tags', tag))
+        if not players_with_tags:
+            continue
+        if not not_query:   # if a normal query
+            if not players:
+                players = players_with_tags
+            else:
+                players_doc_ids = [player.doc_id for player in players]
+                players = [player for player in players_with_tags if player.doc_id in players_doc_ids]
+            continue
+        # For a not_query return players without tags
+        if not players:
+            players_all = Player.get_all()
+        else:
+            players_all = players
+        players_with_tags_doc_ids = [player.doc_id for player in players_with_tags]
+        players_without_tags = [player for player in players_all if player.doc_id not in players_with_tags_doc_ids]
+        if players_without_tags:
+            if not players:
+                players = players_without_tags
+            else:
+                players_doc_ids = [player.doc_id for player in players]
+                players = [player for player in players_without_tags if player.doc_id in players_doc_ids]
+    if not players:
+        return None
+    players.sort(key=lambda player: player.bid_order)
+    return players
+
+
 def bids_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
     if per_page is None or direction not in [FirestorePage.NEXT_PAGE, FirestorePage.PREV_PAGE]:
         bids = Bid.order_by(('bid_order', Bid.ORDER_DESCENDING))
@@ -381,6 +430,7 @@ class Upload:
             player.type = player_row.pop().strip()
             tags = [tag.strip().lower() for tag in player_row.pop().split(';') if len(tag) > 0]
             tags.append(player.country.lower())
+            tags.append(player.country_code.lower())
             if player.type.lower() not in tags:
                 tags.append(player.type.lower())
             player.tags = tags

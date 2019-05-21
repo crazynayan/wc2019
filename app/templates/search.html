@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<h3>
+    Players
+    with tags
+    {% for tag in tags %}
+    <span class="badge badge-info">{{ tag }}</span>
+    {% endfor %}
+</h3>
+{% if players %}
+
+<table class="table table-bordered table-sm table-hover">
+    <thead class="thead-dark">
+    <th scope="col">No.</th>
+    <th scope="col">Name</th>
+    <th scope="col" style="text-align:center;">Score</th>
+    <th scope="col" style="text-align:center;">Value</th>
+    <th scope="col" style="text-align:center;">M</th>
+    <th scope="col" style="text-align:center;">O</th>
+    <th scope="col" style="text-align:center;">R</th>
+    <th scope="col" style="text-align:center;">W</th>
+    <th scope="col" style="text-align:center;">Country</th>
+    <th scope="col">Type</th>
+    <th scope="col" style="text-align:center;">Owner</th>
+    </thead>
+    <tbody>
+    {% for player in players %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>
+            <a href="{{ url_for('main.player_profile', player_id=player.doc_id) }}"
+               style="text-decoration:none !important; color:inherit">
+                {% if 'captain' in player.tags %}
+                <div  class="text-primary">{{ player.name }}</div>
+                {% elif 'backup' in player.tags %}
+                <div  class="text-warning">{{ player.name }}</div>
+                {% elif 'injury' in player.tags %}
+                <div  class="text-danger">{{ player.name }}</div>
+                {% else  %}
+                <div  class="text-dark">{{ player.name }}</div>
+                {% endif %}
+            </a>
+        </td>
+        <td style="text-align:center; font-weight:bold;">
+            {{ player.score }}
+        </td>
+        <td style="text-align:center; font-weight:bold;">
+            {{ player.value }}
+        </td>
+        <td style="text-align:center">
+            {{ player.matches }}
+        </td>
+        <td style="text-align:center">
+            {{ player.overs_per_match }}
+        </td>
+        <td style="text-align:center">
+            {{ player.runs_per_match }}
+        </td>
+        <td style="text-align:center">
+            {{ player.wickets_per_match }}
+        </td>
+        <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;text-align:center;">
+            <a href="{{ url_for('main.player_search', q=player.country_code.lower()) }}"
+               style="text-decoration:none !important; color:inherit;">
+                <div>{{ player.country_code.upper() }}</div>
+            </a>
+        </td>
+        <td>
+            <a href="{{ url_for('main.player_search', q=player.type.lower()) }}"
+               style="text-decoration:none !important; color:inherit;">
+                {{ player.type }}
+            </a>
+        </td>
+        {% if player.owner_username %}
+        <td style="background-color:{{ player.owner['bg_color'] }}; color:{{ player.owner['color'] }}; font-weight:bold;text-align:center;">
+            <a href="{{ url_for('main.purchased_players', username=player.owner_username) }}"
+               style="text-decoration:none !important; color:inherit;">
+                <div>{{ player.owner_username.upper() }}</div>
+            </a>
+        </td>
+        {% else %}
+        <td style="text-align:center;">-</td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+    <td></td>
+    <td style="text-align:left; font-weight:bold;">
+        Summary
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.score }}
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.value }}
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.matches }}
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.overs }}
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.runs }}
+    </td>
+    <td style="text-align:center; font-weight:bold;">
+        {{ summary.wickets }}
+    </td>
+    <td colspan="3"></td>
+    </tbody>
+</table>
+{% else %}
+<p>No results found based on your search.</p>
+<p>Here is some information on how to search for player in tags.</p>
+
+{% endif %}
+{% endblock %}

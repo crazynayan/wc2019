@@ -48,6 +48,8 @@ class Player(FirestoreModel):
     BIDDING = 'bidding'
     PURCHASED = 'purchased'
     UNSOLD = 'unsold'
+    # Tags - Accept a not query for
+    TAGS_NOT = ['backup', 'injury', 'captain']
 
     def __init__(self, name=None):
         super().__init__(name)
@@ -93,7 +95,11 @@ class Player(FirestoreModel):
     def overs_per_match(self):
         if self.balls == 0 or self.matches == 0:
             return 0
-        balls_per_match = round(self.balls / self.matches)
+        return self.balls_to_overs(self.balls, self.matches)
+
+    @staticmethod
+    def balls_to_overs(balls, matches):
+        balls_per_match = round(balls / matches)
         overs = balls_per_match // 6
         balls = balls_per_match % 6
         return round(overs + (balls * 0.1), 1)
@@ -102,19 +108,19 @@ class Player(FirestoreModel):
     def runs_per_match(self):
         if self.matches == 0:
             return 0
-        return round(self.runs / self.matches, 2)
+        return round(self.runs / self.matches, 1)
 
     @property
     def wickets_per_match(self):
         if self.matches == 0:
             return 0
-        return round(self.wickets / self.matches, 2)
+        return round(self.wickets / self.matches, 1)
 
     @property
     def catches_per_match(self):
         if self.matches == 0:
             return 0
-        return round(self.catches / self.matches, 2)
+        return round(self.catches / self.matches, 1)
 
     @property
     def image_file(self):
@@ -182,8 +188,8 @@ class Game(FirestoreModel):
         # Game status
         self.bid_in_progress = False
         self.player_in_bidding = None
-        self.user_to_bid = 0  # Initialize to user_count when a player enters bidding, Decremented for every bid
-        self.users_to_bid = list()
+        self.user_to_bid = 0        # Initialize to user_count when a player enters bidding, Decremented for every bid
+        self.users_to_bid = list()  # Initialize with all usernames, remove username for every bid
         self.last_player = None
         self.last_winner = None
         self.last_price = 0
@@ -280,7 +286,7 @@ class Country:
     CODES = ['eng', 'ind', 'nz', 'sa', 'aus', 'pak', 'sl', 'wi', 'ban', 'afg']
     DATA = {
         'eng': {'name': 'England', 'rank': 1, 'color': 'crimson', 'bg_color': 'navy'},
-        'ind': {'name': 'India', 'rank': 2, 'color': 'darkorange', 'bg_color': 'dodgerblue'},
+        'ind': {'name': 'India', 'rank': 2, 'color': 'lightsalmon', 'bg_color': 'dodgerblue'},
         'sa': {'name': 'South Africa', 'rank': 3, 'color': 'yellow', 'bg_color': 'forestgreen'},
         'nz': {'name': 'New Zealand', 'rank': 4, 'color': 'white', 'bg_color': 'black'},
         'aus': {'name': 'Australia', 'rank': 5, 'color': 'green', 'bg_color': 'yellow'},
