@@ -1,4 +1,4 @@
-from flask import render_template, request, url_for, flash, redirect, jsonify, g
+from flask import render_template, request, url_for, flash, redirect, jsonify, g, current_app
 from flask_login import login_required, current_user
 from app.main import bp
 from app.main.forms import BidForm, SearchForm
@@ -14,6 +14,10 @@ def before_request():
     g.game = game
     if current_user.is_authenticated:
         g.search_form = SearchForm()
+    if current_app and current_app.config.get('TESTING'):
+        g.testing = True
+    else:
+        g.testing = False
 
 
 @bp.route('/')

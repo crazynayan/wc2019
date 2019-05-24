@@ -1,6 +1,8 @@
+import os
 import click
 from app.main.game_transactions import Upload, invite_bid
 from app.models import Game
+from config import TestConfig
 
 
 def register(app):
@@ -20,18 +22,23 @@ def register(app):
         players.csv - 'name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order'\n
         scores.csv - To be developed\n
         """
-        if not upload_type or not isinstance(upload_type, str):
-            raise RuntimeError('Requires one parameter as a upload type.')
+        if os.environ.get('WC_ENVIRONMENT') == 'dev':
+            click.echo('You are running this command on DEV server')
+        else:
+            click.echo('You are running this command on the PROD sever.')
 
         if upload_type not in Upload.ACCEPTED_TYPES:
-            raise RuntimeError('Upload of only certain types are accepted. users, players, scores are valid options.')
+            click.echo('Upload of only certain types are accepted. users, players, scores are valid options.')
+            return
 
         upload_data = Upload()
+        if os.environ.get('WC_ENVIRONMENT') == 'dev' and upload_type == 'users':
+            upload_data.file_name = TestConfig.USER_FILE_NAME
         result = upload_data(upload_type)
         if result != Upload.SUCCESS:
-            raise RuntimeError('Some error in upload.')
-        if Upload.INIT_GAME[upload_type]:
-            Game.init_game()
+            click.echo(f'Error Code: {result}. Error in upload.')
+            return
+        click.echo('Upload done!')
 
     @wc.command()
     @click.argument('command')
@@ -42,6 +49,11 @@ def register(app):
         pause - Pause bidding.\n
         resume - Resume bidding.\n
         """
+        if os.environ.get('WC_ENVIRONMENT') == 'dev':
+            click.echo('You are running this command on DEV server')
+        else:
+            click.echo('You are running this command on the PROD sever.')
+
         game = Game.read()
         if game is None:
             game = Game.init_game()

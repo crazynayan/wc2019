@@ -1,13 +1,9 @@
 import unittest
+from random import randrange
 from app.main.game_transactions import *
 from app import create_app
 from app.models import User, Player, Game, Bid, Country
-from config import Config
-
-
-class TestConfig(Config):
-    TESTING = True
-    GAC_KEY_PATH = 'test-key.json'
+from config import TestConfig
 
 
 class UserTest(unittest.TestCase):
@@ -21,10 +17,6 @@ class UserTest(unittest.TestCase):
         Bid.delete_all()
 
     def tearDown(self) -> None:
-        # User.delete_all()
-        # Player.delete_all()
-        # Game.delete_all()
-        # Bid.delete_all()
         self.app_context.pop()
 
     def test_user_create(self):
@@ -634,6 +626,7 @@ class UploadTest(unittest.TestCase):
             'vp': TestConfig.INITIAL_BUDGET,
         }
         # Upload
+        self.upload_data.file_name = self.app.config.get('USER_FILE_NAME')
         result = self.upload_data('users')
         self.assertEqual(Upload.SUCCESS, result)
         users = User.get_all()
@@ -730,3 +723,37 @@ class UploadTest(unittest.TestCase):
         self.assertEqual('forestgreen', sa.bg_color)
         self.assertEqual('yellow', sa.color)
 
+
+class AutoBidTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = create_app(TestConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.upload_data = Upload()
+
+    def tearDown(self) -> None:
+        self.app_context.pop()
+
+    def test_auto_bid(self):
+        users = User.get_all()
+        self.assertEqual(9, len(users))
+        game = Game.read()
+        self.assertIsNotNone(game)
+        self.assertEqual(9, game.user_count)
+        self.assertEqual(150, game.player_count)
+        self.assertEqual(150, game.player_to_bid)
+        self.assertFalse(game.bid_in_progress)
+        invite_bid()
+        game.refresh()
+        while game.bid_in_progress:
+            bid = Bid.query_first(player_name=game.player_in_bidding)
+            for user in users:
+                user.refresh()
+                if user.balance > 0:
+                    sbp = game.avg_player_bid
+                    amount = randrange(sbp - 20, sbp + 20)
+                    if user.balance < amount:
+                        amount = user.balance
+                    accept_bid(bid, user, amount)
+            game.refresh()
+        self.assertEqual(0, game.player_to_bid)

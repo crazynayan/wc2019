@@ -25,15 +25,20 @@
                 <div>{{ player.name }}</div>
             </a>
         </td>
-        <td  style="text-align:center">
-            {{ player.type }}
+        <td style="text-align:center">
+            <a href="{{ url_for('main.player_search', q=player.type.lower()) }}"
+               style="text-decoration:none !important; color:inherit;">
+                {{ player.type }}
+            </a>
         </td>
         <td style="text-align:center">
             {{ player.value }}
         </td>
-        <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold; text-align:center;">
-            {{ player.country }}
-        </td>
+        <td  style="background-color:{{ player.bg_color }}; color:{{ player.color }}; font-weight:bold;text-align:center;">
+            <a href="{{ url_for('main.player_search', q=player.country_code.lower()) }}"
+               style="text-decoration:none !important; color:inherit;">
+                <div>{{ player.country }}</div>
+            </a>
         <td>
             {% for tag in player.tags %}
             <span class="badge badge-info">{{ tag }}</span>

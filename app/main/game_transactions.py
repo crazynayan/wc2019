@@ -376,13 +376,15 @@ class Upload:
     def __init__(self, upload_type=None):
         self.type = upload_type
         self.data_list = None
+        self.file_name = None
 
     def __call__(self, upload_type=None):
         if upload_type is not None:
             self.type = upload_type
         if not self.type or self.type not in self.ACCEPTED_TYPES:
             return self.ERROR_NOT_VALID_TYPE
-        self.file_name = upload_type + '.csv'
+        if not self.file_name:
+            self.file_name = upload_type + '.csv'
         try:
             with open(self.file_name) as csv_file:
                 self.data_list = list(csv.reader(csv_file))
@@ -404,10 +406,7 @@ class Upload:
             user.bg_color = user_row[4].strip().lower()
             user.update_batch()
         User.commit_batch()
-        game = Game.read()
-        if not game:
-            game = Game.init_game()
-        game.set_user_count()
+        Game.init_game()
         return self.SUCCESS
 
     def upload_players(self):

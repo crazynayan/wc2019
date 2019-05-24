@@ -1,8 +1,13 @@
+import os
 from firebase_admin import firestore
 from app import create_app, cli
 from app.models import User, Player, Game, Bid
+from config import TestConfig
 
-app = create_app()
+if os.environ.get('WC_ENVIRONMENT') == 'dev':
+    app = create_app(TestConfig)
+else:
+    app = create_app()
 cli.register(app)
 
 
