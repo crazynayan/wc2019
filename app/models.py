@@ -3,10 +3,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from firestore_model import FirestoreModel
 from app import login
+from config import Config
 
 
 class User(UserMixin, FirestoreModel):
-    INITIAL_BUDGET = 10000
+    INITIAL_BUDGET = Config.INITIAL_BUDGET
     COLLECTION = 'users'
     DEFAULT = 'username'
 

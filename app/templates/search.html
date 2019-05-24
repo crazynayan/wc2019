@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block app_content %}
+{% if players %}
 <h3>
     Players
     with tags
@@ -8,7 +9,7 @@
     <span class="badge badge-info">{{ tag }}</span>
     {% endfor %}
 </h3>
-{% if players %}
+
 
 <table class="table table-bordered table-sm table-hover">
     <thead class="thead-dark">
@@ -110,8 +111,72 @@
     </tbody>
 </table>
 {% else %}
-<p>No results found based on your search.</p>
+<div class="alert alert-danger" role="alert">
+    No results found based on your search.
+</div>
 <p>Here is some information on how to search for player in tags.</p>
-
+<h4>Valid Tags</h4>
+<table class="table table-bordered table-sm">
+    <thead>
+        <th scope="col">Category</th>
+        <th scope="col">Tags</th>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Country</td>
+            <td>
+                {% for tag in help.countries %}
+                <span class="badge badge-info">{{ tag }}</span>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td>Player Type</td>
+            <td>
+                {% for tag in help.types %}
+                <span class="badge badge-info">{{ tag }}</span>
+                {% endfor %}
+            </td>
+        </tr>
+        <tr>
+            <td>General</td>
+            <td>
+                {% for tag in help.others %}
+                <span class="badge badge-info">{{ tag }}</span>
+                {% endfor %}
+            </td>
+        </tr>
+    </tbody>
+</table>
+<h4>Notes</h4>
+<table class="table table-bordered table-sm">
+    <thead>
+    <th scope="col">Type</th>
+    <th scope="col">Description</th>
+    <th scope="col">Example</th>
+    <th scope="col">Result</th>
+    </thead>
+    <tr>
+        <th scope="row">AND</th>
+        <td>
+            Multiple tags should be separated by a semi colon (;).
+            A maximum of 10 tags can be used for search.
+        </td>
+        <td><kbd>ind;opener</kbd></td>
+        <td>Will return all opening batsman from India.</td>
+    </tr>
+    <tr>
+        <th scope="row">NOT</th>
+        <td>Prefix the tag with a dash (-) to get the result which exclude that tag.</td>
+        <td><kbd>sa;-backup</kbd></td>
+        <td>Will return the playing XI of South Africa</td>
+    </tr>
+    <tr>
+        <th scope="row">OR</th>
+        <td>All the tags are combined in an AND condition by default. For an OR condition use the NOT operator.</td>
+        <td><kbd>-sl;-wi;-afg;-aus;-nz;-sa;-eng;-ban</kbd></td>
+        <td>Will return the complete teams of India and Pakistan</td>
+    </tr>
+</table>
 {% endif %}
 {% endblock %}

@@ -135,4 +135,8 @@ def player_search():
         summary['overs'] = round(sum([player.overs_per_match for player in players]))
         summary['runs'] = round(sum([player.runs_per_match for player in players]))
         summary['wickets'] = round(sum([player.wickets_per_match for player in players]))
-    return render_template(template, title=title, players=players, tags=tags, summary=summary)
+    tags_help = dict()
+    tags_help['countries'] = Country.CODES
+    tags_help['types'] = ['opener', 'middle order', 'wicket keeper', 'allrounder', 'fast bowler', 'spin bowler']
+    tags_help['others'] = ['backup', 'injury', 'captain']
+    return render_template(template, title=title, players=players, tags=tags, summary=summary, help=tags_help)

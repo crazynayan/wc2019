@@ -626,13 +626,12 @@ class UploadTest(unittest.TestCase):
             'ag': TestConfig.INITIAL_BUDGET,
             'as': TestConfig.INITIAL_BUDGET,
             'fa': TestConfig.INITIAL_BUDGET,
-            'ma': TestConfig.INITIAL_BUDGET,
             'mb': TestConfig.INITIAL_BUDGET,
             'nz': TestConfig.INITIAL_BUDGET,
             'pp': TestConfig.INITIAL_BUDGET,
             'rd': TestConfig.INITIAL_BUDGET,
             'sc': TestConfig.INITIAL_BUDGET,
-            'sy': TestConfig.INITIAL_BUDGET,
+            'vp': TestConfig.INITIAL_BUDGET,
         }
         # Upload
         result = self.upload_data('users')
@@ -655,10 +654,10 @@ class UploadTest(unittest.TestCase):
         result = self.upload_data('players')
         self.assertEqual(Upload.SUCCESS, result)
         players = Player.get_all()
-        self.assertEqual(149, len(players))
+        self.assertEqual(150, len(players))
         angelo = Player.query_first(name='Angelo Mathews')
         self.assertEqual(4.1, angelo.overs_per_match)
-        self.assertEqual(26.5, angelo.runs_per_match)
+        self.assertEqual(26.4, angelo.runs_per_match)
         self.assertEqual(0.6, angelo.wickets_per_match)
         # Test pagination
         page = available_players_view(25)
@@ -677,8 +676,8 @@ class UploadTest(unittest.TestCase):
         for _ in range(4):
             page = available_players_view(page.per_page, end=page.current_end.doc_id, direction=FirestorePage.NEXT_PAGE)
         self.assertEqual(126, page.current_start.bid_order)
-        self.assertEqual(149, page.current_end.bid_order)
-        self.assertEqual(24, len(page.items))
+        self.assertEqual(150, page.current_end.bid_order)
+        self.assertEqual(25, len(page.items))
         self.assertFalse(page.has_next)
         self.assertTrue(page.has_prev)
         # Test previous page
@@ -701,21 +700,26 @@ class UploadTest(unittest.TestCase):
         self.assertIsNone(page)
 
         # Test image
-        countries = ['Australia', 'India', 'Sri Lanka', 'England', 'New Zealand', 'South Africa', 'Pakistan', 'West Indies', 'Bangladesh']
-        for country in countries:
-            players = Player.query(country=country)
-            if country == 'England':
-                self.assertEqual(14, len(players))
-            else:
-                self.assertEqual(15, len(players))
+        for country in Country.CODES:
+            players = Player.query(country_code=country)
+            self.assertEqual(15, len(players))
             for player in players:
                 self.assertIsNotNone(player.image_file, f'{player.name}')
+                if player.wickets > 0:
+                    if 'spin bowler' not in player.tags and 'fast bowler' not in player.tags:
+                        self.assertFalse(True, f'No bowler tag for player who has taken wickets for {player.name}')
+                else:
+                    if 'spin bowler' in player.tags or 'fast bowler' in player.tags:
+                        self.assertFalse(True, f'Bowler tag exists for player who has not taken wickets for {player.name}')
             tags = (country.lower(), '-backup')
             players = search_players_view(tags)
             self.assertEqual(11, len(players), f'{tags}')
             tags = ('captain', country.lower())
             players = search_players_view(tags)
             self.assertEqual(1, len(players), f'{tags}')
+            tags = ('-sl', '-wi', '-afg', '-aus', '-nz', '-sa', '-eng', '-ban')
+            players = search_players_view(tags)
+            self.assertEqual(30, len(players), f'{tags}')
 
     def test_country(self):
         aus = Country('Aus')
