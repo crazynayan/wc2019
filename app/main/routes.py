@@ -129,7 +129,7 @@ def player_search():
     title = 'Players'
     if not g.search_form.validate():
         return redirect(url_for('main.home'))
-    tags = g.search_form.q.data.split(';')
+    tags = g.search_form.q.data.lower().split(';')
     players = search_players_view(tags)
     summary = dict()
     if players:
