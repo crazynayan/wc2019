@@ -1,4 +1,5 @@
 import csv
+import json
 import random
 from firebase_admin import firestore
 from flask import current_app
@@ -262,10 +263,6 @@ def ranked_users_view():
     return User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
 
 
-def purchased_players_view(username):
-    return Player.order_by(('score', User.ORDER_DESCENDING), ('price', User.ORDER_DESCENDING),
-                           query={'owner_username': username})
-
 
 def player_view(player_id):
     return Player.read(player_id)
@@ -284,6 +281,26 @@ def available_players_view(per_page=None, start='', end='', direction=FirestoreP
     if len(page.items) == 0:
         return None
     return page
+
+
+def player_summary(players):
+    summary = dict()
+    if not players:
+        return summary
+    summary['score'] = sum([player.score for player in players])
+    summary['value'] = sum([player.value for player in players])
+    summary['price'] = sum([player.price for player in players])
+    summary['avg_score'] = round(summary['price'] / summary['score'], 1) if summary['score'] > 0 else 0.0
+    summary['avg_value'] = round(summary['price'] / summary['value'], 1) if summary['value'] > 0 else 0.0
+    return summary
+
+
+def purchased_players_view(username):
+    data = dict()
+    data['players'] = Player.order_by(('score', User.ORDER_DESCENDING), ('price', User.ORDER_DESCENDING),
+                                      query={'owner_username': username})
+    data['summary'] = player_summary(data['players'])
+    return data
 
 
 def search_players_view(tags):
@@ -329,8 +346,11 @@ def search_players_view(tags):
                 players = [player for player in players_without_tags if player.doc_id in players_doc_ids]
     if not players:
         return None
-    players.sort(key=lambda player: player.bid_order)
-    return players
+    players.sort(key=lambda player: (player.score, player.price), reverse=True)
+    data = dict()
+    data['players'] = players
+    data['summary'] = player_summary(players)
+    return data
 
 
 def bids_view(per_page=None, start='', end='', direction=FirestorePage.NEXT_PAGE):
@@ -466,3 +486,34 @@ class Upload:
         pass
 
 
+class Download:
+
+    def __init__(self, file_name='wc.json'):
+        self.file_name = file_name
+
+    def __call__(self):
+        data = dict()
+        # Game
+        data['game'] = list()
+        game = Game.read()
+        if game:
+            data['game'].append(game.to_dict())
+        # User
+        data['user'] = list()
+        users = User.get_all()
+        for user in users:
+            user_dict = user.to_dict()
+            data['user'].append(user_dict)
+        # Player
+        data['player'] = list()
+        players = Player.get_all()
+        for player in players:
+            data['player'].append(player.to_dict())
+        # Bid
+        data['bid'] = list()
+        bids = Bid.get_all()
+        for bid in bids:
+            data['bid'].append(bid.to_dict())
+        # Write to the file
+        with open(self.file_name, 'w') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, sort_keys=True, indent=4)

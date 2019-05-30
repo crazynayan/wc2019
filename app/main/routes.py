@@ -36,8 +36,8 @@ def index():
 def purchased_players(username):
     template = 'purchased.html'
     title = 'Players'
-    players = purchased_players_view(username)
-    return render_template(template, title=title, players=players)
+    data = purchased_players_view(username)
+    return render_template(template, title=title, players=data['players'], summary=data['summary'])
 
 
 @bp.route('/available')
@@ -130,17 +130,10 @@ def player_search():
     if not g.search_form.validate():
         return redirect(url_for('main.home'))
     tags = g.search_form.q.data.lower().split(';')
-    players = search_players_view(tags)
-    summary = dict()
-    if players:
-        summary['score'] = sum([player.score for player in players])
-        summary['value'] = sum([player.value for player in players])
-        summary['matches'] = sum([player.matches for player in players])
-        summary['overs'] = round(sum([player.overs_per_match for player in players]))
-        summary['runs'] = round(sum([player.runs_per_match for player in players]))
-        summary['wickets'] = round(sum([player.wickets_per_match for player in players]))
+    data = search_players_view(tags)
     tags_help = dict()
     tags_help['countries'] = Country.CODES
     tags_help['types'] = ['opener', 'middle order', 'wicket keeper', 'allrounder', 'fast bowler', 'spin bowler']
     tags_help['others'] = ['backup', 'injury', 'captain']
-    return render_template(template, title=title, players=players, tags=tags, summary=summary, help=tags_help)
+    return render_template(template, title=title, players=data['players'],
+                           tags=tags, summary=data['summary'], help=tags_help)

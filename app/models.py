@@ -161,7 +161,7 @@ class Player(FirestoreModel):
     def value(self):
         if self.matches == 0:
             return 10
-        points_per_match = self.runs_per_match * 0.5 + self.wickets_per_match * 10 + self.catches_per_match * 4
+        points_per_match = self.runs_per_match * 0.5 + self.wickets_per_match * 12 + self.catches_per_match * 4
         points = points_per_match * self.matches_to_play
         # Adjust based on probability in playing XI
         points *= self.playing_xi
@@ -169,6 +169,18 @@ class Player(FirestoreModel):
         adjustment_factor = 1 - 0.00004 * (100 - min(self.matches, 100)) ** 2
         points *= adjustment_factor
         return round(points)
+
+    @property
+    def avg_score(self):
+        if self.price <= 0 or self.score <= 0:
+            return 0.0
+        return round(self.price / self.score, 1)
+
+    @property
+    def avg_value(self):
+        if self.price <= 0 or self.value <= 0:
+            return 0.0
+        return round(self.price / self.value, 1)
 
 
 class Game(FirestoreModel):

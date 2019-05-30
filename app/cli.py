@@ -1,11 +1,17 @@
 import os
 import click
-from app.main.game_transactions import Upload, invite_bid
+from app.main.game_transactions import Upload, invite_bid, Download
 from app.models import Game
 from config import TestConfig
 
 
 def register(app):
+    def env_banner():
+        if os.environ.get('WC_ENVIRONMENT') == 'dev':
+            click.echo('You are running this command on DEV server')
+        else:
+            click.echo('You are running this command on the PROD sever.')
+
     @app.cli.group()
     def wc():
         """World Cup commands."""
@@ -22,10 +28,7 @@ def register(app):
         players.csv - 'name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order'\n
         scores.csv - To be developed\n
         """
-        if os.environ.get('WC_ENVIRONMENT') == 'dev':
-            click.echo('You are running this command on DEV server')
-        else:
-            click.echo('You are running this command on the PROD sever.')
+        env_banner()
 
         if upload_type not in Upload.ACCEPTED_TYPES:
             click.echo('Upload of only certain types are accepted. users, players, scores are valid options.')
@@ -49,10 +52,7 @@ def register(app):
         pause - Pause bidding.\n
         resume - Resume bidding.\n
         """
-        if os.environ.get('WC_ENVIRONMENT') == 'dev':
-            click.echo('You are running this command on DEV server')
-        else:
-            click.echo('You are running this command on the PROD sever.')
+        env_banner()
 
         game = Game.read()
         if game is None:
@@ -103,4 +103,14 @@ def register(app):
             game.update()
             click.echo('Bidding has been resumed.')
 
+    @wc.command()
+    def download():
+        """
+        Download all data in json format.
+        """
+        env_banner()
+
+        download_data = Download()
+        download_data()
+        click.echo('Download done.')
 

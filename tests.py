@@ -1,4 +1,5 @@
 import unittest
+import os
 from random import randrange
 from app.main.game_transactions import *
 from app import create_app
@@ -399,9 +400,11 @@ class GameTest(unittest.TestCase):
         self.assertEqual(4, pranay.player_count)
 
         # Get pranay player view and check
-        db_players = purchased_players_view(pranay.username)
-        for index, db_player in enumerate(db_players):
+        data = purchased_players_view(pranay.username)
+        for index, db_player in enumerate(data['players']):
             self.assertDictEqual(test_players[index].to_dict(), db_player.to_dict())
+        self.assertEqual(657, data['summary']['score'])
+        self.assertEqual(1400, data['summary']['price'])
 
 
 class BidTest(unittest.TestCase):
@@ -705,13 +708,13 @@ class UploadTest(unittest.TestCase):
                     if 'spin bowler' in player.tags or 'fast bowler' in player.tags:
                         self.assertFalse(True, f'Bowler tag exists for player who has not taken wickets for {player.name}')
             tags = (country.lower(), '-backup')
-            players = search_players_view(tags)
+            players = search_players_view(tags)['players']
             self.assertEqual(11, len(players), f'{tags}')
             tags = ('captain', country.lower())
-            players = search_players_view(tags)
+            players = search_players_view(tags)['players']
             self.assertEqual(1, len(players), f'{tags}')
             tags = ('-sl', '-wi', '-afg', '-aus', '-nz', '-sa', '-eng', '-ban')
-            players = search_players_view(tags)
+            players = search_players_view(tags)['players']
             self.assertEqual(30, len(players), f'{tags}')
 
     def test_country(self):
@@ -757,3 +760,20 @@ class AutoBidTest(unittest.TestCase):
                     accept_bid(bid, user, amount)
             game.refresh()
         self.assertEqual(0, game.player_to_bid)
+
+
+class DownloadTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = create_app(TestConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.upload_data = Upload()
+
+    def tearDown(self) -> None:
+        self.app_context.pop()
+
+    def test_download(self):
+        download_data = Download()
+        download_data()
+        self.assertTrue(os.path.isfile(download_data.file_name))
+
