@@ -279,10 +279,10 @@ class GameTest(unittest.TestCase):
             player.create()
 
         # Init points and check for 0 points
-        # init_user_points()
-        # db_users = User.get_all()
-        # for db_user in db_users:
-        #     self.assertEqual(0, db_user.points)
+        init_user_points()
+        db_users = User.get_all()
+        for db_user in db_users:
+            self.assertEqual(0, db_user.points)
 
         # Sync points and check
         sync_player_user_points()
@@ -695,27 +695,33 @@ class UploadTest(unittest.TestCase):
         page = available_players_view(page.per_page, start=page.current_start.doc_id, direction=FirestorePage.PREV_PAGE)
         self.assertIsNone(page)
 
-        # Test image
+        # Test player stats
         for country in Country.CODES:
             players = Player.query(country_code=country)
             self.assertEqual(15, len(players))
             for player in players:
-                self.assertIsNotNone(player.image_file, f'{player.name}')
+                # self.assertIsNotNone(player.image_file, f'{player.name}')
                 if player.wickets > 0:
                     if 'spin bowler' not in player.tags and 'fast bowler' not in player.tags:
                         self.assertFalse(True, f'No bowler tag for player who has taken wickets for {player.name}')
                 else:
                     if 'spin bowler' in player.tags or 'fast bowler' in player.tags:
                         self.assertFalse(True, f'Bowler tag exists for player who has not taken wickets for {player.name}')
-            tags = (country.lower(), '-backup')
-            players = search_players_view(tags)['players']
-            self.assertEqual(11, len(players), f'{tags}')
-            tags = ('captain', country.lower())
-            players = search_players_view(tags)['players']
-            self.assertEqual(1, len(players), f'{tags}')
-            tags = ('-sl', '-wi', '-afg', '-aus', '-nz', '-sa', '-eng', '-ban')
-            players = search_players_view(tags)['players']
-            self.assertEqual(30, len(players), f'{tags}')
+
+        # Test search tags
+        tags = (country.lower(), '-backup')
+        players = search_players_view(tags)['players']
+        self.assertEqual(11, len(players), f'{tags}')
+        tags = ('captain', country.lower())
+        players = search_players_view(tags)['players']
+        self.assertEqual(1, len(players), f'{tags}')
+        tags = ('-sl', '-wi', '-afg', '-aus', '-nz', '-sa', '-eng', '-ban')
+        players = search_players_view(tags)['players']
+        self.assertEqual(30, len(players), f'{tags}')
+
+    def test_upload_scores(self):
+        result = self.upload_data('scores')
+        self.assertEqual(Upload.SUCCESS, result, result)
 
     def test_country(self):
         aus = Country('Aus')

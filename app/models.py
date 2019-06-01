@@ -206,6 +206,8 @@ class Game(FirestoreModel):
         self.last_player = None
         self.last_winner = None
         self.last_price = 0
+        # Score status
+        self.total_score = 0.0
 
     def create(self):
         return self.update()

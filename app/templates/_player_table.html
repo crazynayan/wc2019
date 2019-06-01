@@ -54,6 +54,9 @@
                 <div>{{ player.owner_username.upper() }}</div>
             </a>
         </td>
+        {% else %}
+        <td style="text-align:center;">-</td>
+        {% endif %}
         <td style="text-align:center; font-weight:bold;">
             {{ player.price }}
         </td>
@@ -63,10 +66,6 @@
         <td style="text-align:center; font-weight:bold;">
             {{ player.avg_value }}
         </td>
-
-        {% else %}
-        <td style="text-align:center;">-</td>
-        {% endif %}
     </tr>
     {% endfor %}
     <tr style="text-align:center; font-weight:bold;">

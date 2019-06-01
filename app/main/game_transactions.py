@@ -2,9 +2,10 @@ import csv
 import json
 import random
 from firebase_admin import firestore
-from flask import current_app
 from firestore_model import FirestorePage
 from app.models import Game, User, Player, Bid, Country
+
+import click
 
 
 @firestore.transactional
@@ -66,8 +67,7 @@ def purchase_player_transaction(transaction, player, user=None, amount=0):
 
 
 def purchase_player(player, user, amount):
-    db = firestore.client(current_app.db_app)
-    transaction = db.transaction()
+    transaction = Player.get_transaction()
     if purchase_player_transaction(transaction, player, user, amount):
         return update_user_points_transaction(transaction, user)
     return False
@@ -115,13 +115,22 @@ def init_user_points():
 
 
 def sync_player_user_points():
-    # This function needs to be called after scores.csv has been updated
-    init_user_points()
+    # This function needs to be called after scores for the players has been updated
     users = User.get_all()
-    db = firestore.client(current_app.db_app)
-    transaction = db.transaction()
+    User.init_batch()
     for user in users:
-        update_user_points_transaction(transaction, user)
+        owned_players = Player.query(owner_username=user.username)
+        if owned_players:
+            user.points = sum([player.score for player in owned_players])
+            user.update_batch()
+    User.commit_batch()
+    players = Player.get_all()
+    Player.init_batch()
+    for player in players:
+        if isinstance(player.owner, dict) and 'points' in player.owner:
+            player.owner['points'] = next((user.points for user in users if user.username == player.owner_username), 0)
+            player.update_batch()
+    Player.commit_batch()
 
 
 @firestore.transactional
@@ -216,8 +225,7 @@ def accept_bid_transaction(transaction, bid, user, amount):
 
 
 def accept_bid(bid, user, amount=Bid.PASS):
-    db = firestore.client(current_app.db_app)
-    transaction = db.transaction()
+    transaction = Bid.get_transaction()
     bid_result = accept_bid_transaction(transaction, bid, user, amount)
     if bid_result <= 0:
         return bid_result
@@ -245,11 +253,10 @@ def accept_bid(bid, user, amount=Bid.PASS):
 
 
 def invite_bid():
-    db = firestore.client(current_app.db_app)
-    transaction = db.transaction()
     available_players = available_players_view()
     if not available_players:
         return Bid.ERROR_NO_MORE_PLAYERS
+    transaction = Bid.get_transaction()
     bid_result = invite_bid_transaction(transaction, available_players[0])
     if bid_result != Bid.SUCCESS:
         return bid_result
@@ -261,7 +268,6 @@ def invite_bid():
 
 def ranked_users_view():
     return User.order_by(('points', User.ORDER_DESCENDING), ('balance', User.ORDER_DESCENDING))
-
 
 
 def player_view(player_id):
@@ -483,11 +489,29 @@ class Upload:
         return self.SUCCESS
 
     def upload_scores(self):
-        pass
+        hdr = ['player', 'score']
+        if self.data_list[0] != hdr:
+            return self.ERROR_INVALID_HEADER
+        errors = list()
+        Player.init_batch()
+        for player_row in self.data_list[1:]:
+            name = player_row[0]
+            try:
+                score = float(player_row[1])
+            except ValueError:
+                continue
+            player = Player.query_first(name=name)
+            if not player:
+                errors.append(name)
+                continue
+            player.score = round(score, 1)
+            player.update_batch()
+        Player.commit_batch()
+        sync_player_user_points()
+        return errors if errors else self.SUCCESS
 
 
 class Download:
-
     def __init__(self, file_name='wc.json'):
         self.file_name = file_name
 

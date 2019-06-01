@@ -1,5 +1,22 @@
 from firebase_admin import firestore
 from google.cloud.exceptions import NotFound
+from firebase_admin import initialize_app, credentials, get_app
+
+
+def init_firestore_db(gac_key_path, name=None):
+    if name:
+        try:
+            db_app = get_app(name)
+        except ValueError:
+            db_app = initialize_app(credentials.Certificate(gac_key_path), name=name)
+    else:
+        try:
+            db_app = get_app()
+        except ValueError:
+            db_app = initialize_app(credentials.Certificate(gac_key_path))
+
+    FirestoreModel.init_db(db_app)
+    return db_app
 
 
 class FirestoreModel:
@@ -30,6 +47,10 @@ class FirestoreModel:
         except ValueError:
             return False
         return True
+
+    @classmethod
+    def get_transaction(cls):
+        return cls.db.transaction() if cls.db else None
 
     def to_dict(self):
         model_dict = self.__dict__.copy()

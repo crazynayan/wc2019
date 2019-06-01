@@ -1,3 +1,6 @@
+import os
+
+
 def get_secret_key():
     try:
         with open('secret-key.txt') as f:
@@ -20,3 +23,5 @@ class TestConfig(Config):
     GAC_KEY_PATH = 'test-key.json'
     USER_FILE_NAME = 'test-users.csv'
 
+
+config = TestConfig() if os.getenv('WC_ENVIRONMENT') == 'dev' else Config()

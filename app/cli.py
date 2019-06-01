@@ -1,13 +1,13 @@
-import os
 import click
+
 from app.main.game_transactions import Upload, invite_bid, Download
 from app.models import Game
-from config import TestConfig
+from config import config
 
 
 def register(app):
     def env_banner():
-        if os.environ.get('WC_ENVIRONMENT') == 'dev':
+        if config.TESTING:
             click.echo('You are running this command on DEV server')
         else:
             click.echo('You are running this command on the PROD sever.')
@@ -35,8 +35,8 @@ def register(app):
             return
 
         upload_data = Upload()
-        if os.environ.get('WC_ENVIRONMENT') == 'dev' and upload_type == 'users':
-            upload_data.file_name = TestConfig.USER_FILE_NAME
+        if upload_type == 'users':
+            upload_data.file_name = config.USER_FILE_NAME
         result = upload_data(upload_type)
         if result != Upload.SUCCESS:
             click.echo(f'Error Code: {result}. Error in upload.')
