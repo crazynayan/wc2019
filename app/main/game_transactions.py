@@ -5,8 +5,6 @@ from firebase_admin import firestore
 from firestore_model import FirestorePage
 from app.models import Game, User, Player, Bid, Country
 
-import click
-
 
 @firestore.transactional
 def purchase_player_transaction(transaction, player, user=None, amount=0):
@@ -388,6 +386,7 @@ class Upload:
         'users',
         'players',
         'scores',
+        'all',
     ]
     INIT_GAME = {
         'users': True,
@@ -509,6 +508,53 @@ class Upload:
         Player.commit_batch()
         sync_player_user_points()
         return errors if errors else self.SUCCESS
+
+    @classmethod
+    def upload_all(cls, file_name='wc.json'):
+        try:
+            with open(file_name) as json_file:
+                data = json.load(json_file)
+        except FileNotFoundError:
+            return cls.ERROR_FILE_NOT_FOUND
+        # Load User data
+        if 'user' in data:
+            User.delete_all()
+            User.init_batch()
+            for user_dict in data['user']:
+                user = User.from_dict(user_dict)
+                if not user:
+                    continue
+                user.update_batch()
+            User.commit_batch()
+        # Load Game
+        if 'game' in data:
+            game_dict = next((game for game in data['game']), None)
+            if game_dict:
+                game = Game.from_dict(game_dict)
+                if game:
+                    Game.delete_all()
+                    game.create()
+        # Load Player
+        if 'player' in data:
+            Player.delete_all()
+            Player.init_batch()
+            for player_dict in data['player']:
+                player = Player.from_dict(player_dict)
+                if not player:
+                    continue
+                player.update_batch()
+            Player.commit_batch()
+        # Load Bid
+        if 'bid' in data:
+            Bid.delete_all()
+            Bid.init_batch()
+            for bid_dict in data['bid']:
+                bid = Bid.from_dict(bid_dict)
+                if not bid:
+                    continue
+                bid.update_batch()
+            Bid.commit_batch()
+        return cls.SUCCESS
 
 
 class Download:

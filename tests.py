@@ -732,6 +732,10 @@ class UploadTest(unittest.TestCase):
         self.assertEqual('forestgreen', sa.bg_color)
         self.assertEqual('yellow', sa.color)
 
+    def test_upload_all(self):
+        result = Upload.upload_all()
+        self.assertEqual(Upload.SUCCESS, result)
+
 
 class AutoBidTest(unittest.TestCase):
     def setUp(self) -> None:

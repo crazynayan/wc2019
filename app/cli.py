@@ -37,7 +37,10 @@ def register(app):
         upload_data = Upload()
         if upload_type == 'users':
             upload_data.file_name = config.USER_FILE_NAME
-        result = upload_data(upload_type)
+        if upload_type == 'all':
+            result = Upload.upload_all()
+        else:
+            result = upload_data(upload_type)
         if result != Upload.SUCCESS:
             click.echo(f'Error Code: {result}. Error in upload.')
             return
