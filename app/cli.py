@@ -22,7 +22,7 @@ def register(app):
     def upload(upload_type):
         """
         Upload data.
-        UPLOAD_TYPE can be [users | players | scores]\n
+        UPLOAD_TYPE can be [users | players | scores |  all]\n
         File name as <UPLOAD_TYPE>.csv should exists in the current project folder.\n
         users.csv - 'username', 'name', 'password', 'color', 'bg_color'.\n
         players.csv - 'name', 'country', 'type', 'tags', 'matches', 'runs', 'wickets', 'balls', 'bid_order'\n
@@ -31,7 +31,8 @@ def register(app):
         env_banner()
 
         if upload_type not in Upload.ACCEPTED_TYPES:
-            click.echo('Upload of only certain types are accepted. users, players, scores are valid options.')
+            click.echo('Upload of only certain types are accepted.')
+            click.echo('UPLOAD_TYPE can be [users | players | scores |  all]')
             return
 
         upload_data = Upload()

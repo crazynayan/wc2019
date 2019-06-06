@@ -137,13 +137,20 @@ class FirestoreModel:
         return self
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, dict_type=False):
         docs = cls.db.collection(cls.COLLECTION).stream()
-        models = list()
-        for doc in docs:
-            model = cls.from_dict(doc.to_dict())
-            model.doc_id = doc.id
-            models.append(model)
+        if not dict_type:
+            models = list()
+            for doc in docs:
+                model = cls.from_dict(doc.to_dict())
+                model.doc_id = doc.id
+                models.append(model)
+        else:
+            models = dict()
+            for doc in docs:
+                model = cls.from_dict(doc.to_dict())
+                model.doc_id = doc.id
+                models[doc.id] = model
         return models
 
     @classmethod
@@ -172,7 +179,6 @@ class FirestoreModel:
             model.doc_id = doc.id
             models.append(model)
         return models
-
 
     @classmethod
     def order_by(cls, *criteria, query={}, array=(), page=None):

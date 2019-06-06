@@ -90,6 +90,12 @@ class UserTest(unittest.TestCase):
             if db_user.name in names:
                 self.assertDictEqual(test_users[db_user.name].to_dict(), db_user.to_dict())
 
+        # Get all users in a dict
+        db_users = User.get_all(dict_type=True)
+        for doc_id in db_users:
+            if db_users[doc_id].name in names:
+                self.assertDictEqual(test_users[db_users[doc_id].name].to_dict(), db_users[doc_id].to_dict())
+
     def test_query(self):
         # Setup users and test_users
         users = dict()
