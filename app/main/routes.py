@@ -131,6 +131,8 @@ def player_search():
         return redirect(url_for('main.home'))
     tags = g.search_form.q.data.lower().split(';')
     data = search_players_view(tags)
+    if not data:
+        data = {'players': None, 'summary': None}
     tags_help = dict()
     tags_help['countries'] = Country.CODES
     tags_help['types'] = ['opener', 'middle order', 'wicket keeper', 'allrounder', 'fast bowler', 'spin bowler']
